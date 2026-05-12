@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Baara Gnè - Sira SAAS</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-navy-textured: #1e3a8a;
+            --bg-pastel: #eef2ff;
+            --primary-yellow: #fbbf24;
+            --light-yellow: #fef08a;
+            --light-green: #bbf7d0;
+            --vibrant-blue: #3b82f6;
+            --text-white: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { 
+            background-color: var(--bg-pastel);
+            color: #1e293b; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header, .dock {
+            background-color: var(--bg-navy-textured);
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.05) 0,
+                rgba(255, 255, 255, 0.05) 1px,
+                transparent 0,
+                transparent 10px
+            );
+            color: var(--text-white);
+        }
+
+        header {
+            padding: 18px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .app-title { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+        .user-icon { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--primary-yellow); display: flex; align-items: center; justify-content: center; }
+
+        .slider-wrapper {
+            flex: 1;
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+        .slider-wrapper::-webkit-scrollbar { display: none; }
+
+        .page {
+            min-width: 100%;
+            height: 100%;
+            scroll-snap-align: start;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 20px;
+            padding: 25px 20px;
+            align-content: start;
+        }
+
+        .app-item { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; }
+
+        .app-icon-box {
+            width: 72px; height: 72px;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .app-icon-box::after {
+            content: ''; position: absolute; top: -50%; left: -100%; width: 50%; height: 200%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
+            transform: rotate(25deg); animation: shine 4s infinite;
+        }
+        @keyframes shine { 0% { left: -100%; } 100% { left: 200%; } }
+
+        .box-blue { background: var(--vibrant-blue); color: white; }
+        .box-yellow { background: var(--light-yellow); color: #854d0e; }
+        .box-green { background: var(--light-green); color: #166534; }
+
+        .app-icon-box i { width: 30px; height: 30px; }
+        .app-label { font-size: 13px; text-align: center; font-weight: 800; color: #334155; }
+
+        .dots-container { display: flex; justify-content: center; gap: 8px; padding-bottom: 12px; background: var(--bg-pastel); }
+        .dot { width: 6px; height: 6px; background: #cbd5e1; border-radius: 50%; }
+        .dot.active { background: var(--bg-navy-textured); width: 15px; border-radius: 3px; }
+
+        .dock {
+            padding: 15px 5px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .dock-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-white); text-decoration: none; }
+        .dock-icon { width: 28px; height: 28px; color: var(--primary-yellow); }
+        .dock-label { font-size: 10px; font-weight: 700; }
+
+        .system-bar { height: 45px; display: flex; justify-content: space-between; align-items: center; padding: 0 45px; background: #000; }
+        .system-btn { background: none; border: none; color: #718096; font-size: 11px; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="app-title">Baara Gnè - Sira</div>
+        <div class="user-icon"><i data-lucide="user" style="color:var(--primary-yellow)"></i></div>
+    </header>
+
+    <div class="slider-wrapper" id="slider">
+        <!-- PAGE 1 (MÉLANGE TOTAL 8 ICONES) -->
+        <div class="page">
+            <a href="#" class="app-item"><div class="app-icon-box box-blue"><i data-lucide="folder-kanban"></i></div><span class="app-label">Projet</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-green"><i data-lucide="calendar"></i></div><span class="app-label">Calendrier</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-yellow"><i data-lucide="alert-triangle"></i></div><span class="app-label">Risques</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-green"><i data-lucide="wallet"></i></div><span class="app-label">Portefeuille</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-yellow"><i data-lucide="truck"></i></div><span class="app-label">Ressources</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-blue"><i data-lucide="file-pie-chart"></i></div><span class="app-label">Bilan Projet</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-yellow"><i data-lucide="file-text"></i></div><span class="app-label">Rapports</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-blue"><i data-lucide="brain-circuit"></i></div><span class="app-label">IA Prédictive</span></a>
+        </div>
+        <!-- PAGE 2 (MÉLANGE TOTAL 7 ICONES) -->
+        <div class="page">
+            <a href="#" class="app-item"><div class="app-icon-box box-blue"><i data-lucide="shield-check"></i></div><span class="app-label">Coffre-fort</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-green"><i data-lucide="activity"></i></div><span class="app-label">Radar Santé</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-yellow"><i data-lucide="brain"></i></div><span class="app-label">IA Import</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-green"><i data-lucide="handshake"></i></div><span class="app-label">Partenaires</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-blue"><i data-lucide="message-square"></i></div><span class="app-label">Messages</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-green"><i data-lucide="settings"></i></div><span class="app-label">Paramètres</span></a>
+            <a href="#" class="app-item"><div class="app-icon-box box-yellow"><i data-lucide="users"></i></div><span class="app-label">Équipe</span></a>
+        </div>
+    </div>
+
+    <div class="dots-container">
+        <div class="dot active" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+    </div>
+
+    <div class="dock">
+        <a href="#" class="dock-item"><div class="dock-icon"><i data-lucide="list-checks"></i></div><span class="dock-label">Todo-Projet</span></a>
+        <a href="#" class="dock-item"><div class="dock-icon"><i data-lucide="home"></i></div><span class="dock-label">Accueil</span></a>
+        <a href="#" class="dock-item"><div class="dock-icon"><i data-lucide="user-check"></i></div><span class="dock-label">Todo-Perso</span></a>
+        <a href="#" class="dock-item"><div class="dock-icon"><i data-lucide="calendar-range"></i></div><span class="dock-label">Gantt</span></a>
+    </div>
+
+    <div class="system-bar">
+        <button class="system-btn">PRÉCÉDENT</button>
+        <button class="system-btn">SUIVANT</button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const slider = document.getElementById('slider');
+        const dot1 = document.getElementById('dot1');
+        const dot2 = document.getElementById('dot2');
+        slider.addEventListener('scroll', () => {
+            const pageIndex = Math.round(slider.scrollLeft / window.innerWidth);
+            if (pageIndex === 0) { dot1.classList.add('active'); dot2.classList.remove('active'); }
+            else { dot1.classList.remove('active'); dot2.classList.add('active'); }
+        });
+    </script>
+</body>
+</html>
