@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-textured: #1e3a8a;
+  --color-pastel: #eef2ff;
+  --color-primary-yellow: #fbbf24;
+  --color-light-yellow: #fef08a;
+  --color-light-green: #bbf7d0;
+  --color-vibrant-blue: #3b82f6;
+  --color-text-dark: #1e293b;
+}
+
+:root {
+  --bg-navy-textured: #1e3a8a;
+  --bg-pastel: #eef2ff;
+  --primary-yellow: #fbbf24;
+  --light-yellow: #fef08a;
+  --light-green: #bbf7d0;
+  --vibrant-blue: #3b82f6;
+  --text-white: #ffffff;
+  --text-dark: #1e293b;
+}
+
+/* On nettoie les styles par défaut du body */
+body {
+  background-color: #eef2ff !important;
+  color: #1e293b !important;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* Texture Navy */
+.textured-navy {
+  background-color: #1e3a8a !important;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.05) 0,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 0,
+    transparent 10px
+  );
+}
+
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -100%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
+  transform: rotate(25deg);
+  animation: shine 4s infinite;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
