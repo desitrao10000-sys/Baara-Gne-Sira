@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -329,8 +329,44 @@ export default function ProjectCreationWizard({
                         </div>
                     )}
 
+                    {/* ── Aide IA Gemini (au-dessus du champ pour mobile) ── */}
+                    <div className="mb-3">
+                        {!showHelp ? (
+                            <button onClick={() => { setShowHelp(true); setHelpQuery(""); setHelpResponse(null); }} className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-xs font-bold text-amber-600 flex items-center justify-center gap-2 transition-colors active:scale-95">
+                                <Lightbulb size={14} /> 💡 Obtenir de l'aide IA
+                            </button>
+                        ) : (
+                            <div className="bg-amber-50 rounded-xl border-2 border-amber-200 overflow-hidden">
+                                <div className="bg-amber-100/80 px-3 py-1.5 flex items-center justify-between border-b border-amber-200">
+                                    <div className="flex items-center gap-1.5">
+                                        <Lightbulb size={12} className="text-primary-yellow" />
+                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Assistant IA</span>
+                                    </div>
+                                    <button onClick={() => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); }} className="text-amber-400 hover:text-amber-600" title="Fermer l'aide"><X size={12} /></button>
+                                </div>
+                                <div className="p-2.5">
+                                    <div className="flex gap-1.5">
+                                        <input type="text" value={helpQuery} onChange={(e) => { setHelpQuery(e.target.value); setHelpResponse(null); }} onKeyDown={(e) => { if (e.key === "Enter") handleHelp(); }} placeholder="Pose ta question ici..." className="flex-1 p-2 rounded-lg border-2 border-slate-200 text-[11px] font-semibold text-slate-800 outline-none focus:border-amber-400" />
+                                        <button onClick={handleHelp} disabled={!helpQuery.trim()} title="Envoyer la question" className={`px-3 py-2 rounded-lg flex items-center justify-center ${helpQuery.trim() ? "bg-amber-400 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Send size={14} /></button>
+                                    </div>
+                                    {helpLoading && (
+                                        <div className="mt-2 p-2 rounded-lg text-[10px] font-semibold flex items-center gap-2 bg-amber-50 border border-amber-200">
+                                            <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                                            <span className="text-amber-700">🤖 L'IA réfléchit...</span>
+                                        </div>
+                                    )}
+                                    {helpResponse && !helpLoading && (
+                                        <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+                                            <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Input Field */}
-                    <div className="mt-2">
+                    <div>
                         {currentQuestion.type === "date" ? (
                             <input
                                 type="date"
@@ -364,32 +400,6 @@ export default function ProjectCreationWizard({
                         )}
                     </div>
 
-                    {/* ── Aide IA Gemini ── */}
-                    <div className="mt-3">
-                        {!showHelp ? (
-                            <button onClick={() => { setShowHelp(true); setHelpQuery(""); setHelpResponse(null); }} className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-xs font-bold text-amber-600 flex items-center justify-center gap-2 transition-colors active:scale-95">
-                                <Lightbulb size={14} /> Obtenir de l'aide IA pour cette question
-                            </button>
-                        ) : (
-                            <div className="bg-amber-50 rounded-xl border-2 border-amber-200 overflow-hidden">
-                                <div className="bg-amber-100/80 px-3 py-1.5 flex items-center justify-between border-b border-amber-200">
-                                    <div className="flex items-center gap-1.5">
-                                        <Lightbulb size={12} className="text-primary-yellow" />
-                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Assistant IA — {currentQuestion.question}</span>
-                                    </div>
-                                    <button onClick={() => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); }} className="text-amber-400 hover:text-amber-600" title="Fermer l'aide"><X size={12} /></button>
-                                </div>
-                                <div className="p-2.5">
-                                    <div className="flex gap-1.5">
-                                        <input type="text" value={helpQuery} onChange={(e) => { setHelpQuery(e.target.value); setHelpResponse(null); }} onKeyDown={(e) => { if (e.key === "Enter") handleHelp(); }} placeholder="Pose ta question ici..." className="flex-1 p-2 rounded-lg border-2 border-slate-200 text-[11px] font-semibold text-slate-800 outline-none focus:border-amber-400" />
-                                        <button onClick={handleHelp} disabled={!helpQuery.trim()} title="Envoyer la question" className={`px-3 py-2 rounded-lg flex items-center justify-center ${helpQuery.trim() ? "bg-amber-400 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Send size={14} /></button>
-                                    </div>
-                                    {helpLoading && (
-                                        <div className="mt-2 p-2 rounded-lg text-[10px] font-semibold flex items-center gap-2 bg-amber-50 border border-amber-200">
-                                            <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-amber-700">🤖 L'IA réfléchit...</span>
-                                        </div>
-                                    )}
                                     {helpResponse && !helpLoading && (
                                         <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
                                             <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
