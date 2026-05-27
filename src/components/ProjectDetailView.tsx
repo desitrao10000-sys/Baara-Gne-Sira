@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
     ArrowLeft, Pencil, Check, X, FolderKanban, Building2, MapPin, Globe2,
     Calendar, Clock, FileText, Target, Sparkles, Trash2, Save, AlertTriangle,
     Calculator, Landmark, Percent, TrendingUp, CreditCard, PiggyBank,
-    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt, Lightbulb, Send,
+    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt,
 } from "lucide-react";
 import { ProjectInfo } from "./ProjectCreationWizard";
 import { BusinessPlanData } from "./BusinessPlanWizard";
@@ -43,27 +43,6 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
     const [editBpValue, setEditBpValue] = useState("");
     const [editingCaIndex, setEditingCaIndex] = useState<number | null>(null);
     const [editCaValue, setEditCaValue] = useState("");
-
-    // ── Assistant Gemini ──
-    const [activeHelpField, setActiveHelpField] = useState<string | null>(null);
-    const [helpQuery, setHelpQuery] = useState("");
-    const [helpResponse, setHelpResponse] = useState<string | null>(null);
-    const [helpLoading, setHelpLoading] = useState(false);
-
-    const handleFieldHelp = async (fieldId: string, fieldLabel: string) => {
-        if (!helpQuery.trim()) return;
-        setHelpLoading(true);
-        try {
-            const res = await fetch("/api/gemini-project-help", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: helpQuery, sectionId: fieldId, sectionTitle: fieldLabel }),
-            });
-            if (res.ok) { const d = await res.json(); setHelpResponse(d.response); }
-            else setHelpResponse("❌ Erreur de connexion. Reformule ta question.");
-        } catch { setHelpResponse("❌ Erreur réseau. Vérifie ta connexion."); }
-        setHelpLoading(false);
-    };
 
     const startCaEdit = (i: number, v: number) => { setEditingCaIndex(i); setEditCaValue(String(v)); };
     const confirmCaEdit = () => {
@@ -155,40 +134,6 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                     </div>
                                 ) : (
                                     <p className={`text-[15px] font-bold leading-relaxed pl-9 ${info[field.id] ? "text-slate-900" : "text-slate-400 italic"}`}>{displayValue}</p>
-                                )}
-
-                                {/* ── Barre d'aide Gemini ── */}
-                                {activeHelpField === field.id ? (
-                                    <div className="mt-3 bg-amber-50 rounded-xl border-2 border-amber-200 overflow-hidden">
-                                        <div className="bg-amber-100/80 px-3 py-1.5 flex items-center justify-between border-b border-amber-200">
-                                            <div className="flex items-center gap-1.5">
-                                                <Lightbulb size={12} className="text-primary-yellow" />
-                                                <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Assistant — {field.label}</span>
-                                            </div>
-                                            <button onClick={() => { setActiveHelpField(null); setHelpQuery(""); setHelpResponse(null); }} className="text-amber-400 hover:text-amber-600" title="Fermer"><X size={12} /></button>
-                                        </div>
-                                        <div className="p-2.5">
-                                            <div className="flex gap-1.5">
-                                                <input type="text" value={helpQuery} onChange={(e) => { setHelpQuery(e.target.value); setHelpResponse(null); }} onKeyDown={(e) => { if (e.key === "Enter") handleFieldHelp(field.id, field.label); }} placeholder={`Pose ta question sur "${field.label}"...`} className="flex-1 p-2 rounded-lg border-2 border-slate-200 text-[11px] font-semibold text-slate-800 outline-none focus:border-amber-400" />
-                                                <button onClick={() => handleFieldHelp(field.id, field.label)} disabled={!helpQuery.trim()} title="Envoyer" className={`px-2.5 py-2 rounded-lg flex items-center justify-center ${helpQuery.trim() ? "bg-amber-400 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Send size={14} /></button>
-                                            </div>
-                                            {helpLoading && (
-                                                <div className="mt-2 p-2 rounded-lg text-[10px] font-semibold flex items-center gap-2 bg-amber-50 border border-amber-200">
-                                                    <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                                                    <span className="text-amber-700">🤖 L'IA réfléchit...</span>
-                                                </div>
-                                            )}
-                                            {helpResponse && !helpLoading && (
-                                                <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[180px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-                                                    <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button onClick={() => { setActiveHelpField(field.id); setHelpQuery(""); setHelpResponse(null); }} className="mt-2 w-full py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1.5 transition-colors">
-                                        <Lightbulb size={11} /> Obtenir de l'aide IA
-                                    </button>
                                 )}
                             </div>
                         );
