@@ -399,16 +399,6 @@ export default function ProjectCreationWizard({
                             </div>
                         )}
                     </div>
-
-                                    {helpResponse && !helpLoading && (
-                                        <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-                                            <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
