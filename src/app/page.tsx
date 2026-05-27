@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Header from "@/components/Header";
 import Dock from "@/components/Dock";
 import ProjectGrid from "@/components/ProjectGrid";
@@ -8,59 +8,16 @@ import ProjectView from "@/components/ProjectView";
 import ProjectDetailView from "@/components/ProjectDetailView";
 import ProjectCreationWizard, { ProjectInfo } from "@/components/ProjectCreationWizard";
 import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanWizard";
+import { useSupabaseProjects, Project } from "@/lib/useSupabaseProjects";
 import { PlusCircle, ChevronRight, FolderKanban, Calendar, MapPin } from "lucide-react";
-
-export interface Project {
-  id: string;
-  info: ProjectInfo;
-  createdAt: string;
-  businessPlan?: string | null;
-}
 
 export default function Home() {
   const [currentView, setCurrentView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, loading, saveProject, deleteProject, saveBusinessPlan } = useSupabaseProjects();
   const [showWizard, setShowWizard] = useState(false);
   const [showBusinessPlan, setShowBusinessPlan] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("baara-projects");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setProjects(parsed);
-          return;
-        }
-      } catch { /* ignore */ }
-    }
-    const defaultProjects: Project[] = [
-      {
-        id: "default-1",
-        info: {
-          name: "Contractualisation et Commercialisation du Riz",
-          sector: "Agriculture",
-          location: "Ouagadougou, Burkina Faso",
-          zone: "Nationale",
-          startDate: "2026-06-01",
-          duration: "2 ans",
-          description: "Projet de contractualisation et de commercialisation du riz local pour améliorer les revenus des producteurs et garantir la qualité des produits sur le marché national.",
-          objectives: "Atteindre un chiffre d'affaires de 50 millions FCFA, contractualiser avec 200 producteurs, devenir leader de la distribution de riz qualité au Burkina Faso",
-        },
-        createdAt: new Date().toISOString(),
-      },
-    ];
-    setProjects(defaultProjects);
-    localStorage.setItem("baara-projects", JSON.stringify(defaultProjects));
-  }, []);
-
-  useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem("baara-projects", JSON.stringify(projects));
-    }
-  }, [projects]);
 
   const handleAppClick = (id: string) => {
     if (id === "project") {
@@ -83,16 +40,20 @@ export default function Home() {
   };
 
   const handleWizardComplete = (info: ProjectInfo) => {
-    const newProject: Project = { id: Date.now().toString(), info, createdAt: new Date().toISOString() };
-    setProjects((prev) => {
-      const updated = [...prev, newProject];
-      localStorage.setItem("baara-projects", JSON.stringify(updated));
-      return updated;
-    });
+    const newProject: Project = { id: crypto.randomUUID(), info, createdAt: new Date().toISOString() };
+    saveProject(newProject);
     setShowWizard(false);
     setSelectedProject(newProject);
     setCurrentView("project-detail");
   };
+
+  if (loading) {
+    return (
+      <main className="flex flex-col h-screen items-center justify-center bg-pastel">
+        <div className="text-2xl font-black text-slate-700 animate-pulse">Chargement...</div>
+      </main>
+    );
+  }
 
   // Show creation wizard fullscreen
   if (showWizard) {
@@ -105,14 +66,9 @@ export default function Home() {
     return (
       <BusinessPlanWizard
         initialData={existingBP}
-        onComplete={(bpData) => {
-          const bpJson = JSON.stringify(bpData);
-          setProjects((prev) => {
-            const updated = prev.map((p) => p.id === selectedProject.id ? { ...p, businessPlan: bpJson } : p);
-            localStorage.setItem("baara-projects", JSON.stringify(updated));
-            return updated;
-          });
-          setSelectedProject((prev) => prev ? { ...prev, businessPlan: bpJson } : null);
+        onComplete={async (bpData) => {
+          await saveBusinessPlan(selectedProject.id, bpData);
+          setSelectedProject((prev) => prev ? { ...prev, businessPlan: JSON.stringify(bpData) } : null);
           setShowBusinessPlan(false);
         }}
         onBack={() => setShowBusinessPlan(false)}
@@ -133,30 +89,17 @@ export default function Home() {
           <ProjectDetailView
             project={selectedProject}
             onBack={() => { setCurrentView("project-list"); setSelectedProject(null); }}
-            onSave={(updatedInfo: ProjectInfo) => {
-              setProjects((prev) => {
-                const updated = prev.map((p) => p.id === selectedProject.id ? { ...p, info: updatedInfo } : p);
-                localStorage.setItem("baara-projects", JSON.stringify(updated));
-                return updated;
-              });
-              setSelectedProject((prev) => prev ? { ...prev, info: updatedInfo } : null);
+            onSave={async (updatedInfo: ProjectInfo) => {
+              const updated = { ...selectedProject, info: updatedInfo };
+              await saveProject(updated);
+              setSelectedProject(updated);
             }}
-            onSaveBusinessPlan={(bpData: BusinessPlanData) => {
-              const bpJson = JSON.stringify(bpData);
-              setProjects((prev) => {
-                const updated = prev.map((p) => p.id === selectedProject.id ? { ...p, businessPlan: bpJson } : p);
-                localStorage.setItem("baara-projects", JSON.stringify(updated));
-                return updated;
-              });
-              setSelectedProject((prev) => prev ? { ...prev, businessPlan: bpJson } : null);
+            onSaveBusinessPlan={async (bpData: BusinessPlanData) => {
+              await saveBusinessPlan(selectedProject.id, bpData);
+              setSelectedProject((prev) => prev ? { ...prev, businessPlan: JSON.stringify(bpData) } : null);
             }}
-            onDelete={(projectId: string) => {
-              setProjects((prev) => {
-                const updated = prev.filter((p) => p.id !== projectId);
-                if (updated.length > 0) localStorage.setItem("baara-projects", JSON.stringify(updated));
-                else localStorage.removeItem("baara-projects");
-                return updated;
-              });
+            onDelete={async (projectId: string) => {
+              await deleteProject(projectId);
               setSelectedProject(null);
               setCurrentView("project-list");
             }}
