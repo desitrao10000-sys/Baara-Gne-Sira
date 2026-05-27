@@ -44,6 +44,7 @@ interface ProjectDetailViewProps {
     onDelete: (projectId: string) => void;
     onStartBusinessPlan: () => void;
     onSaveBusinessPlan: (bpData: BusinessPlanData) => void;
+    onDeleteBusinessPlan: () => void;
 }
 
 const fieldConfig: {
@@ -62,11 +63,12 @@ const fieldConfig: {
         { id: "objectives", label: "Objectifs", icon: <Target size={18} className="text-primary-yellow" />, type: "textarea" },
     ];
 
-export default function ProjectDetailView({ project, onBack, onSave, onDelete, onStartBusinessPlan, onSaveBusinessPlan }: ProjectDetailViewProps) {
+export default function ProjectDetailView({ project, onBack, onSave, onDelete, onStartBusinessPlan, onSaveBusinessPlan, onDeleteBusinessPlan }: ProjectDetailViewProps) {
     const [info, setInfo] = useState<ProjectInfo>({ ...project.info });
     const [editingField, setEditingField] = useState<keyof ProjectInfo | null>(null);
     const [editValue, setEditValue] = useState("");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showDeleteBpConfirm, setShowDeleteBpConfirm] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
 
     const [bpData, setBpData] = useState<BusinessPlanData | null>(
@@ -575,6 +577,39 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                         </button>
                     )}
                 </div>
+
+                {/* Supprimer le plan d'affaire */}
+                {bpData && (
+                    <div className="mt-4 mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="h-px flex-1 bg-orange-200" />
+                            <span className="text-xs font-black text-orange-400 uppercase tracking-widest">Plan d'affaires</span>
+                            <div className="h-px flex-1 bg-orange-200" />
+                        </div>
+                        {!showDeleteBpConfirm ? (
+                            <button onClick={() => setShowDeleteBpConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/50 text-orange-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500 transition-all">
+                                <Trash2 size={16} />
+                                Supprimer le plan d'affaires
+                            </button>
+                        ) : (
+                            <div className="bg-orange-50 rounded-2xl p-4 border-2 border-orange-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <AlertTriangle size={20} className="text-orange-500" />
+                                    <span className="text-sm font-black text-orange-700">Supprimer le plan d'affaires ?</span>
+                                </div>
+                                <p className="text-xs text-orange-500 mb-4 font-semibold">Toutes les données financières seront supprimées. Les infos du projet seront conservées.</p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { setBpData(null); onDeleteBusinessPlan(); setShowDeleteBpConfirm(false); }} className="flex-1 py-3 bg-orange-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-md shadow-orange-500/30">
+                                        <Trash2 size={14} /> Oui, supprimer
+                                    </button>
+                                    <button onClick={() => setShowDeleteBpConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform border border-slate-200">
+                                        <X size={14} /> Annuler
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Zone danger */}
                 <div className="mt-6 mb-4">

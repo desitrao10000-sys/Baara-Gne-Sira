@@ -104,6 +104,11 @@ export default function Home() {
               setCurrentView("project-list");
             }}
             onStartBusinessPlan={() => setShowBusinessPlan(true)}
+            onDeleteBusinessPlan={async () => {
+              const updated = { ...selectedProject, businessPlan: null };
+              await saveProject(updated);
+              setSelectedProject(updated);
+            }}
           />
         ) : currentView === "project" ? (
           <ProjectView projects={projects.map((p) => p.info.name)} setProjects={() => { }} />
