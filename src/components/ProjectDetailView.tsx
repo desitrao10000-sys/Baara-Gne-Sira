@@ -9,15 +9,20 @@ import {
 } from "lucide-react";
 import { ProjectInfo } from "./ProjectCreationWizard";
 import { BusinessPlanData } from "./BusinessPlanWizard";
+import { ProjectManager, ProjectTask } from "@/lib/useSupabaseProjects";
+import ProjectManagerSection from "./ProjectManagerSection";
+import ProjectTasksSection from "./ProjectTasksSection";
 
 interface ProjectDetailViewProps {
-    project: { id: string; info: ProjectInfo; createdAt: string; businessPlan?: string | null };
+    project: { id: string; info: ProjectInfo; createdAt: string; businessPlan?: string | null; manager?: ProjectManager | null; tasks?: ProjectTask[] };
     onBack: () => void;
     onSave: (updatedInfo: ProjectInfo) => void;
     onDelete: (projectId: string) => void;
     onStartBusinessPlan: () => void;
     onSaveBusinessPlan: (bpData: BusinessPlanData) => void;
     onDeleteBusinessPlan: () => void;
+    onSaveManager: (manager: ProjectManager | null) => void;
+    onSaveTasks: (tasks: ProjectTask[]) => void;
 }
 
 const fieldConfig: { id: keyof ProjectInfo; label: string; icon: React.ReactNode; type: "text" | "date" | "textarea" }[] = [
@@ -31,7 +36,7 @@ const fieldConfig: { id: keyof ProjectInfo; label: string; icon: React.ReactNode
     { id: "objectives", label: "Objectifs", icon: <Target size={18} className="text-primary-yellow" />, type: "textarea" },
 ];
 
-export default function ProjectDetailView({ project, onBack, onSave, onDelete, onStartBusinessPlan, onSaveBusinessPlan, onDeleteBusinessPlan }: ProjectDetailViewProps) {
+export default function ProjectDetailView({ project, onBack, onSave, onDelete, onStartBusinessPlan, onSaveBusinessPlan, onDeleteBusinessPlan, onSaveManager, onSaveTasks }: ProjectDetailViewProps) {
     const [info, setInfo] = useState<ProjectInfo>({ ...project.info });
     const [editingField, setEditingField] = useState<keyof ProjectInfo | null>(null);
     const [editValue, setEditValue] = useState("");
@@ -290,6 +295,19 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                         )}
                     </div>
                 )}
+
+                {/* Section 3 — Responsable du projet */}
+                <ProjectManagerSection
+                    manager={project.manager}
+                    onSave={onSaveManager}
+                />
+
+                {/* Section 4 — Tâches du projet */}
+                <ProjectTasksSection
+                    tasks={project.tasks}
+                    projectMembers={project.manager ? [project.manager.nomComplet] : []}
+                    onSave={onSaveTasks}
+                />
 
                 <div className="mt-6 mb-4">
                     <div className="flex items-center gap-2 mb-3"><div className="h-px flex-1 bg-red-200" /><span className="text-xs font-black text-red-400 uppercase tracking-widest">Zone danger</span><div className="h-px flex-1 bg-red-200" /></div>

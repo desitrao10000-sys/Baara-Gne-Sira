@@ -14,7 +14,7 @@ import { PlusCircle, ChevronRight, FolderKanban, Calendar, MapPin } from "lucide
 export default function Home() {
   const [currentView, setCurrentView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
-  const { projects, loading, saveProject, deleteProject, saveBusinessPlan } = useSupabaseProjects();
+  const { projects, loading, saveProject, deleteProject, saveBusinessPlan, saveManager, saveTasks } = useSupabaseProjects();
   const [showWizard, setShowWizard] = useState(false);
   const [showBusinessPlan, setShowBusinessPlan] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -108,6 +108,14 @@ export default function Home() {
               const updated = { ...selectedProject, businessPlan: null };
               await saveProject(updated);
               setSelectedProject(updated);
+            }}
+            onSaveManager={async (manager) => {
+              await saveManager(selectedProject.id, manager);
+              setSelectedProject((prev) => prev ? { ...prev, manager } : null);
+            }}
+            onSaveTasks={async (tasks) => {
+              await saveTasks(selectedProject.id, tasks);
+              setSelectedProject((prev) => prev ? { ...prev, tasks } : null);
             }}
           />
         ) : currentView === "project" ? (
