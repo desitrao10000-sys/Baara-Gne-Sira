@@ -1558,7 +1558,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 )}
                             </div>
 
-                            <input type="text" value={getVal(currentStep.id)} onChange={(e) => setVal(currentStep.id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) handleNext(); }} placeholder={stepHints[currentStep.id]?.inputHint || "📝 Écris le nom puis le montant"} className="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center" autoFocus />
+                            <input type="text" inputMode="text" enterKeyHint="next" value={getVal(currentStep.id)} onChange={(e) => setVal(currentStep.id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) handleNext(); }} placeholder={stepHints[currentStep.id]?.inputHint || "📝 Écris le nom puis le montant"} className="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center" autoFocus />
                         </>
                     )}
                 </div>
