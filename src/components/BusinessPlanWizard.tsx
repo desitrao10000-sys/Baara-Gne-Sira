@@ -1558,7 +1558,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 )}
                             </div>
 
-                            <textarea rows={2} value={getVal(currentStep.id)} onChange={(e) => setVal(currentStep.id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) handleNext(); e.preventDefault(); } }} placeholder={stepHints[currentStep.id]?.inputHint || "📝 Écris le nom puis le montant"} className="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center resize-none" autoFocus />
+                            <textarea rows={2} value={getVal(currentStep.id)} onChange={(e) => setVal(currentStep.id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) { e.preventDefault(); handleNext(); } }} placeholder={stepHints[currentStep.id]?.inputHint || "📝 Écris le nom puis le montant"} className="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center resize-none" autoFocus />
                         </>
                     )}
                 </div>
