@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = "AIzaSyDjrMmHMJiNQcyoUyz6Ptbuo9Ql6237-GI";
-const MODELS = ["gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"];
-const GEMINI_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+// Modèles dans l'ordre de préférence (les plus disponibles en premier)
+const MODELS = [
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro-latest",
+];
+const GEMINI_URL = (model: string) =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
-const SYSTEM_PROMPT = `Tu es un assistant expert en création de business plan en Afrique (spécialement au Burkina Faso). Tu aides des entrepreneurs à comprendre chaque section du plan d'affaires et à remplir les bons montants.
+const SYSTEM_PROMPT = `Tu es un assistant expert en création de business plan en Afrique (spécialement au Mali et Burkina Faso). Tu aides des entrepreneurs à comprendre chaque section du plan d'affaires et à remplir les bons montants.
 
 RÈGLES STRICTES :
 1. Réponds TOUJOURS en français
@@ -14,32 +21,20 @@ RÈGLES STRICTES :
 5. Corrige les erreurs courantes avec tact
 
 SECTIONS DU PLAN D'AFFAIRES :
-- 📦 Investissement MATÉRIEL : Biens physiques DURABLES achetés UNE FOIS (machines, véhicules, ordinateurs, tables, réfrigérateurs, fours, tracteurs, outils, etc.). Ce sont des objets qui durent des ANNÉES.
-- 📋 Investissement IMMATÉRIEL : Dépenses NON physiques (formation, site web, étude de marché, licences, brevets, frais juridiques, logo, registre de commerce, certification, etc.)
-- 💰 Fonds de ROULEMENT : Trésorerie de départ pour les 3-6 premiers mois (stock de départ, loyer des premiers mois, salaires des premiers mois, imprévus)
-- 💵 Fonds PROPRES : Argent PERSONNEL de l'entrepreneur et ses associés (épargnes, économies, héritage, don reçu, tontine, apport personnel)
-- 🏦 Emprunt BANCAIRE : Argent prêté par une banque ou microfinance (prêt, crédit, financement bancaire)
-- 📊 Taux d'intérêt : % facturé par la banque (Burkina : banque 7-10%, microfinance 12-15%)
+- 📦 Investissement MATÉRIEL : Biens physiques DURABLES achetés UNE FOIS (machines, véhicules, ordinateurs, tables, réfrigérateurs, fours, tracteurs, outils, etc.)
+- 📋 Investissement IMMATÉRIEL : Dépenses NON physiques (formation, site web, étude de marché, licences, brevets, frais juridiques, logo, registre de commerce)
+- 💰 Fonds de ROULEMENT : Trésorerie de départ pour les 3-6 premiers mois (stock initial, loyer, salaires des premiers mois)
+- 💵 Fonds PROPRES : Argent personnel de l'entrepreneur (épargnes, économies, apport personnel)
+- 🏦 Emprunt BANCAIRE : Argent prêté par une banque ou microfinance
+- 📊 Taux d'intérêt : % facturé par la banque (7-15%)
 - 📈 Taux sans risque : Rendement placement sûr (UEMOA ≈ 3,5%)
 - 🏢 Prime sectorielle : Risque du secteur (commerce 3%, agriculture 5%, tech 7%)
-- 🌍 Prime pays : Risque du pays (Burkina 4%, France 2%, Mali 6%)
-- 🧾 IS : Impôt sur les sociétés (Burkina 25%)
-- 📅 Durée amortissement : Années pour répartir l'investissement (info 3 ans, véhicule 5 ans, bâtiment 10 ans)
-- 📊 Charges VARIABLES : Dépenses qui varient avec les ventes (matières premières, emballages, engrais, semences, farine, tissu, carburant, gaz, intrants, aliment bétail, etc.) — en % du CA
-- 🏠 Charges FIXES : Dépenses mensuelles fixes (loyer, salaires, assurances, internet, électricité, eau, comptable, gardiennage, etc.)
-- 💳 Charges FINANCIÈRES : Intérêts de l'emprunt (PAS le capital !)
-
-ERREURS COURANTES À CORRIGER :
-- Les engrais, semences, intrants → Charges variables (PAS investissement matériel ! Ce sont des CONSOMMABLES)
-- Le tissu, coton, farine → Charges variables (PAS investissement matériel ! Ce sont des CONSOMMABLES)
-- Le loyer → Charges fixes (PAS investissement matériel !)
-- Les salaires → Charges fixes (PAS investissement !)
-- La formation → Investissement immatériel (PAS matériel !)
-- L'argent de la banque → Emprunt (PAS fonds propres !)
-- Les intérêts de l'emprunt → Charges financières (PAS l'emprunt lui-même !)
-- Le stock de départ → Fonds de roulement (PAS investissement matériel !)
-
-La section actuelle de l'utilisateur est : {SECTION}. Aide-le spécifiquement pour cette section.`;
+- 🌍 Prime pays : Risque du pays (Mali 6%, Burkina 4%)
+- 🧾 IS : Impôt sur les sociétés (25-30%)
+- 📅 Durée amortissement : Années pour répartir l'investissement
+- 📊 Charges VARIABLES : % du CA (matières premières, intrants, emballages)
+- 🏠 Charges FIXES : Dépenses mensuelles fixes (loyer, salaires, électricité)
+- 💳 Charges FINANCIÈRES : Intérêts de l'emprunt uniquement (PAS le capital)`;
 
 export async function POST(request: NextRequest) {
     try {
@@ -49,7 +44,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Query and sectionId are required" }, { status: 400 });
         }
 
-        const systemPrompt = SYSTEM_PROMPT.replace("{SECTION}", sectionTitle || sectionId);
+        const userMessage = `Je suis dans la section "${sectionTitle || sectionId}". Ma question : "${query}"`;
 
         let data: any = null;
         let lastError = "";
@@ -60,12 +55,13 @@ export async function POST(request: NextRequest) {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        systemInstruction: {
+                            parts: [{ text: SYSTEM_PROMPT }]
+                        },
                         contents: [
                             {
-                                parts: [
-                                    { text: systemPrompt },
-                                    { text: `L'utilisateur est dans la section "${sectionTitle}" et pose cette question : "${query}"` }
-                                ]
+                                role: "user",
+                                parts: [{ text: userMessage }]
                             }
                         ],
                         generationConfig: {
@@ -90,10 +86,15 @@ export async function POST(request: NextRequest) {
         }
 
         if (!data) {
-            return NextResponse.json({ error: "Erreur API Gemini", details: lastError }, { status: 500 });
+            return NextResponse.json(
+                { error: "Erreur API Gemini. Vérifie ta connexion.", details: lastError },
+                { status: 500 }
+            );
         }
 
-        const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu générer une réponse. Reformule ta question.";
+        const aiResponse =
+            data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            "Je n'ai pas pu générer une réponse. Reformule ta question.";
 
         return NextResponse.json({ response: aiResponse });
     } catch (error) {

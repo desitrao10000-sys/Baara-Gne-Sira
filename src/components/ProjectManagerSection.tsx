@@ -110,7 +110,7 @@ export default function ProjectManagerSection({ manager, onSave }: Props) {
             {/* Titre section */}
             <div className="flex items-center gap-2 mb-3">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-purple-400" />
-                <span className="text-xs font-black text-purple-600 uppercase tracking-widest px-1">Section 3 — Équipe du projet</span>
+                <span className="text-xs font-black text-purple-600 uppercase tracking-widest px-1">Section 1 — Équipe du projet</span>
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-purple-400" />
             </div>
 

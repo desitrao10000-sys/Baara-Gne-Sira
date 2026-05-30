@@ -101,38 +101,51 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                 {/* ===================== SECTION 3 — ÉQUIPE EN PREMIER ===================== */}
                 <ProjectManagerSection manager={project.manager} onSave={onSaveManager} />
 
-                {/* ===================== SECTION 1 — DÉTAILS DU PROJET ===================== */}
+                {/* ===================== SECTION 2 — DÉTAILS DU PROJET ===================== */}
                 <div className="mt-4 mb-4">
                     <div className="flex items-center gap-2 mb-3">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent to-yellow-400" />
-                        <span className="text-xs font-black text-yellow-600 uppercase tracking-widest px-1">Section 1 — Détails du projet</span>
+                        <span className="text-xs font-black text-yellow-600 uppercase tracking-widest px-1">Section 2 — Détails du projet</span>
                         <div className="h-px flex-1 bg-gradient-to-l from-transparent to-yellow-400" />
                     </div>
-
-                    {/* Hero card projet */}
                     <div className="rounded-2xl overflow-hidden shadow-lg border border-yellow-100 mb-4">
-                        <div className="bg-gradient-to-br from-yellow-500 via-yellow-400 to-amber-500 p-5">
-                            <div className="flex items-start gap-3">
-                                <div className="w-14 h-14 rounded-2xl bg-white/30 border-2 border-white/40 flex items-center justify-center shrink-0">
-                                    <Sparkles size={26} className="text-white" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h2 className="text-white font-black text-xl leading-tight">{info.name}</h2>
-                                    <p className="text-white/80 text-sm font-bold mt-0.5">{SECTOR_LABELS[info.sector] || info.sector}</p>
-                                    <div className="flex gap-3 mt-2 flex-wrap">
-                                        {info.location && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><MapPin size={11} /> {info.location}</span>}
-                                        {info.zone && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><Globe2 size={11} /> {info.zone}</span>}
-                                        {info.duration && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><Clock size={11} /> {DURATION_LABELS[info.duration] || info.duration}</span>}
-                                    </div>
-                                </div>
+                        {/* Barre titre = nom du projet uniquement */}
+                        <div className="bg-gradient-to-br from-yellow-500 via-yellow-400 to-amber-500 px-5 py-4 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/30 border-2 border-white/40 flex items-center justify-center shrink-0">
+                                <Sparkles size={20} className="text-white" />
                             </div>
+                            <h2 className="text-white font-black text-lg leading-tight flex-1 truncate">{info.name}</h2>
                         </div>
-                        {/* Champs en grille propre */}
+                        {/* Toutes les informations en dessous */}
                         <div className="bg-white divide-y divide-slate-100">
+                            {info.sector && (
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Building2 size={15} className="text-yellow-600" /></div>
+                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Secteur d&apos;activité</p><p className="text-sm font-bold text-slate-900">{SECTOR_LABELS[info.sector] || info.sector}</p></div>
+                                </div>
+                            )}
+                            {info.location && (
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><MapPin size={15} className="text-yellow-600" /></div>
+                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Localisation</p><p className="text-sm font-bold text-slate-900">{info.location}</p></div>
+                                </div>
+                            )}
+                            {info.zone && (
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Globe2 size={15} className="text-yellow-600" /></div>
+                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Zone d&apos;intervention</p><p className="text-sm font-bold text-slate-900">{info.zone}</p></div>
+                                </div>
+                            )}
                             {info.startDate && (
                                 <div className="flex items-center gap-3 px-4 py-3">
                                     <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Calendar size={15} className="text-yellow-600" /></div>
                                     <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Date de démarrage</p><p className="text-sm font-bold text-slate-900">{fmtDate(info.startDate)}</p></div>
+                                </div>
+                            )}
+                            {info.duration && (
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Clock size={15} className="text-yellow-600" /></div>
+                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Durée prévue</p><p className="text-sm font-bold text-slate-900">{DURATION_LABELS[info.duration] || info.duration}</p></div>
                                 </div>
                             )}
                             {info.description && (
@@ -148,14 +161,8 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                 </div>
                             )}
                         </div>
-                        {/* Footer secteur + infos clés */}
                         <div className="bg-yellow-50 px-4 py-3 border-t border-yellow-100">
-                            <div className="flex items-center gap-2">
-                                <Building2 size={14} className="text-yellow-600" />
-                                <span className="text-xs font-black text-yellow-700">Secteur :</span>
-                                <span className="text-xs font-bold text-slate-700">{SECTOR_LABELS[info.sector] || info.sector || "Non renseigné"}</span>
-                            </div>
-                            <button onClick={() => { /* future edit mode */ }} className="mt-2 w-full py-2 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-yellow-100 transition-colors">
+                            <button onClick={() => { /* future edit mode */ }} className="w-full py-2 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-yellow-100 transition-colors">
                                 <Edit3 size={12} /> Modifier les informations
                             </button>
                         </div>
@@ -166,7 +173,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                 <div className="mt-2 mb-4">
                     <div className="flex items-center gap-2 mb-3">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent to-blue-400" />
-                        <span className="text-xs font-black text-blue-600 uppercase tracking-widest px-1">Section 2 — Plan d&apos;affaires chiffré</span>
+                        <span className="text-xs font-black text-blue-600 uppercase tracking-widest px-1">Section 3 — Plan d&apos;affaires chiffré</span>
                         <div className="h-px flex-1 bg-gradient-to-l from-transparent to-blue-400" />
                     </div>
 

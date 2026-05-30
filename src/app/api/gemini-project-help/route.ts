@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = "AIzaSyDjrMmHMJiNQcyoUyz6Ptbuo9Ql6237-GI";
-const MODELS = ["gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"];
-const GEMINI_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+const MODELS = [
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro-latest",
+];
+const GEMINI_URL = (model: string) =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
-const SYSTEM_PROMPT = `Tu es un assistant expert en création de projets entrepreneuriaux en Afrique (spécialement au Burkina Faso). Tu aides des entrepreneurs à bien remplir les informations de leur projet.
+const SYSTEM_PROMPT = `Tu es un assistant expert en création de projets entrepreneuriaux en Afrique (Mali, Burkina Faso, Côte d'Ivoire). Tu aides des entrepreneurs à bien remplir les informations de leur projet.
 
 RÈGLES STRICTES :
 1. Réponds TOUJOURS en français
 2. Sois PRÉCIS et CONCIS (max 150 mots)
 3. Utilise des emojis pour rendre la réponse lisible
-4. Donne des exemples concrets adaptés au contexte africain (Burkina Faso)
+4. Donne des exemples concrets adaptés au contexte africain
 
 SECTIONS DU PROJET :
-- 📛 Nom du projet : Le nom commercial de ton activité. Doit être court, mémorable et professionnel. Ex: "Djiguifa Commerce", "Sahel Agro", "Burkina Tech Solutions"
-- 🏢 Secteur d'activité : Le domaine principal de ton activité (commerce, agriculture, service, industrie, élevage, artisanat, transport, technologie, santé, éducation, restauration, bâtiment)
-- 📍 Localisation : La ville ou le quartier où se trouve ton activité. Ex: "Ouagadougou, secteur 15" ou "Bobo-Dioulasso, Hamdallaye"
-- 🌍 Zone d'intervention : La zone géographique couverte par ton activité. Ex: "Région du Centre", "Tout le Burkina Faso", "Afrique de l'Ouest"
-- 📅 Date de démarrage : La date prévue de lancement de l'activité
-- ⏱ Durée prévue : La durée estimée du projet. Ex: "1 an", "3 ans", "5 ans", "10 ans"
-- 📝 Description : Une description détaillée de ton activité (ce que tu fais, comment tu le fais, pour qui). Ex: "Commerce de détail de produits alimentaires dans le secteur 15 de Ouagadougou. Vente de riz, huile, sucre et produits de première nécessité."
-- 🎯 Objectifs : Les buts que tu veux atteindre. Ex: "Atteindre un CA de 10M FCFA la première année, créer 3 emplois, devenir le premier fournisseur du quartier"
-
-La section actuelle de l'utilisateur est : {SECTION}. Aide-le spécifiquement pour cette section.`;
+- 📛 Nom du projet : Le nom commercial de ton activité. Court, mémorable, professionnel. Ex: "Djiguifa Commerce", "Sahel Agro", "Mali Tech Solutions"
+- 🏢 Secteur d'activité : Le domaine principal (commerce, agriculture, service, industrie, élevage, artisanat, transport, technologie, santé, éducation, restauration, bâtiment)
+- 📍 Localisation : La ville ou quartier. Ex: "Bamako, ACI 2000", "Bobo-Dioulasso, Hamdallaye"
+- 🌍 Zone d'intervention : Zone géographique couverte. Ex: "Région de Sikasso", "Tout le Mali", "Afrique de l'Ouest"
+- 📅 Date de démarrage : La date prévue de lancement
+- ⏱ Durée prévue : La durée estimée du projet (1 an, 3 ans, 5 ans...)
+- 📝 Description : Ce que tu fais, comment tu le fais, pour qui. Sois précis et professionnel.
+- 🎯 Objectifs : Les buts à atteindre (CA, emplois créés, part de marché, expansion géographique)`;
 
 export async function POST(request: NextRequest) {
     try {
@@ -32,7 +36,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Query and sectionId are required" }, { status: 400 });
         }
 
-        const systemPrompt = SYSTEM_PROMPT.replace("{SECTION}", sectionTitle || sectionId);
+        const userMessage = `Je remplis la section "${sectionTitle || sectionId}" de mon projet. Ma question : "${query}"`;
 
         let data: any = null;
         let lastError = "";
@@ -43,12 +47,13 @@ export async function POST(request: NextRequest) {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        systemInstruction: {
+                            parts: [{ text: SYSTEM_PROMPT }]
+                        },
                         contents: [
                             {
-                                parts: [
-                                    { text: systemPrompt },
-                                    { text: `L'utilisateur est dans la section "${sectionTitle}" et pose cette question : "${query}"` }
-                                ]
+                                role: "user",
+                                parts: [{ text: userMessage }]
                             }
                         ],
                         generationConfig: {
@@ -73,10 +78,15 @@ export async function POST(request: NextRequest) {
         }
 
         if (!data) {
-            return NextResponse.json({ error: "Erreur API Gemini", details: lastError }, { status: 500 });
+            return NextResponse.json(
+                { error: "Erreur API Gemini. Vérifie ta connexion.", details: lastError },
+                { status: 500 }
+            );
         }
 
-        const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu générer une réponse. Reformule ta question.";
+        const aiResponse =
+            data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            "Je n'ai pas pu générer une réponse. Reformule ta question.";
 
         return NextResponse.json({ response: aiResponse });
     } catch (error) {
