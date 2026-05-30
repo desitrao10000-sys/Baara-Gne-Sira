@@ -1,11 +1,10 @@
 ﻿"use client";
-
 import { useState } from "react";
 import {
-    ArrowLeft, Pencil, Check, X, FolderKanban, Building2, MapPin, Globe2,
-    Calendar, Clock, FileText, Target, Sparkles, Trash2, Save, AlertTriangle,
+    ArrowLeft, FolderKanban, Building2, MapPin, Globe2,
+    Calendar, Clock, FileText, Target, Sparkles, Trash2, AlertTriangle,
     Calculator, Landmark, Percent, TrendingUp, CreditCard, PiggyBank,
-    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt,
+    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt, ChevronDown, ChevronUp, Edit3,
 } from "lucide-react";
 import { ProjectInfo } from "./ProjectCreationWizard";
 import { BusinessPlanData } from "./BusinessPlanWizard";
@@ -25,25 +24,33 @@ interface ProjectDetailViewProps {
     onSaveTasks: (tasks: ProjectTask[]) => void;
 }
 
-const fieldConfig: { id: keyof ProjectInfo; label: string; icon: React.ReactNode; type: "text" | "date" | "textarea" }[] = [
-    { id: "name", label: "Nom du projet", icon: <Sparkles size={18} className="text-primary-yellow" />, type: "text" },
-    { id: "sector", label: "Secteur d'activité", icon: <Building2 size={18} className="text-primary-yellow" />, type: "text" },
-    { id: "location", label: "Localisation", icon: <MapPin size={18} className="text-primary-yellow" />, type: "text" },
-    { id: "zone", label: "Zone d'intervention", icon: <Globe2 size={18} className="text-primary-yellow" />, type: "text" },
-    { id: "startDate", label: "Date de démarrage", icon: <Calendar size={18} className="text-primary-yellow" />, type: "date" },
-    { id: "duration", label: "Durée prévue", icon: <Clock size={18} className="text-primary-yellow" />, type: "text" },
-    { id: "description", label: "Description", icon: <FileText size={18} className="text-primary-yellow" />, type: "textarea" },
-    { id: "objectives", label: "Objectifs", icon: <Target size={18} className="text-primary-yellow" />, type: "textarea" },
-];
+const SECTOR_LABELS: Record<string, string> = {
+    commerce: "🛒 Commerce", agriculture: "🌾 Agriculture", service: "💼 Service",
+    industrie: "🏭 Industrie", elevage: "🐄 Élevage", artisanat: "🪵 Artisanat",
+    transport: "🚚 Transport", technologie: "💻 Technologie", sante: "🏥 Santé",
+    education: "📚 Éducation", restauration: "🍽️ Restauration", batiment: "🏗️ Bâtiment"
+};
+const DURATION_LABELS: Record<string, string> = {
+    "3-mois": "3 mois", "6-mois": "6 mois", "1-an": "1 an",
+    "2-ans": "2 ans", "3-ans": "3 ans", "5-ans": "5 ans", "10-ans": "10 ans"
+};
+
+function fmtDate(d: string) {
+    if (!d) return "—";
+    try { return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); } catch { return d; }
+}
+function fmtDateTime(iso: string) {
+    try { return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; }
+}
+function fmt(v: number) { return v.toLocaleString("fr-FR", { maximumFractionDigits: 0 }); }
 
 export default function ProjectDetailView({ project, onBack, onSave, onDelete, onStartBusinessPlan, onSaveBusinessPlan, onDeleteBusinessPlan, onSaveManager, onSaveTasks }: ProjectDetailViewProps) {
-    const [info, setInfo] = useState<ProjectInfo>({ ...project.info });
-    const [editingField, setEditingField] = useState<keyof ProjectInfo | null>(null);
-    const [editValue, setEditValue] = useState("");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showDeleteBpConfirm, setShowDeleteBpConfirm] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
     const [bpData, setBpData] = useState<BusinessPlanData | null>(project.businessPlan ? JSON.parse(project.businessPlan) : null);
+    const [bpExpanded, setBpExpanded] = useState(true);
+
+    // BP editing
     const [editingBpField, setEditingBpField] = useState<string | null>(null);
     const [editBpValue, setEditBpValue] = useState("");
     const [editingCaIndex, setEditingCaIndex] = useState<number | null>(null);
@@ -54,272 +61,380 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
         if (editingCaIndex !== null && bpData) {
             const arr: number[] = bpData.caAnnees ? JSON.parse(bpData.caAnnees) : [];
             arr[editingCaIndex] = parseFloat(editCaValue) || 0;
-            const u = { ...bpData, caAnnees: JSON.stringify(arr) }; setBpData(u); onSaveBusinessPlan(u); setHasChanges(true);
+            const u = { ...bpData, caAnnees: JSON.stringify(arr) }; setBpData(u); onSaveBusinessPlan(u);
         }
         setEditingCaIndex(null); setEditCaValue("");
     };
-    const cancelCaEdit = () => { setEditingCaIndex(null); setEditCaValue(""); };
-    const startEdit = (f: keyof ProjectInfo) => { setEditingField(f); setEditValue(info[f]); };
-    const cancelEdit = () => { setEditingField(null); setEditValue(""); };
-    const confirmEdit = () => {
-        if (editValue.trim()) { const u = { ...info, [editingField!]: editValue }; setInfo(u); onSave(u); setHasChanges(true); }
-        setEditingField(null); setEditValue("");
-    };
     const startBpEdit = (k: string, v: string) => { setEditingBpField(k); setEditBpValue(v || ""); };
     const confirmBpEdit = () => {
-        if (editingBpField && bpData) { const u = { ...bpData, [editingBpField]: editBpValue }; setBpData(u); onSaveBusinessPlan(u); setHasChanges(true); }
+        if (editingBpField && bpData) { const u = { ...bpData, [editingBpField]: editBpValue }; setBpData(u); onSaveBusinessPlan(u); }
         setEditingBpField(null); setEditBpValue("");
     };
-    const cancelBpEdit = () => { setEditingBpField(null); setEditBpValue(""); };
-    const handleDelete = () => { onDelete(project.id); };
-    const formatDate = (d: string) => { if (!d) return "Non renseigné"; try { return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); } catch { return d; } };
-    const formatCreatedAt = (iso: string) => { try { return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; } };
+
+    const { info } = project;
+    const teamMembers = project.manager ? [project.manager.nomComplet, ...(project.manager.membres ?? []).map((m) => `${m.prenom} ${m.nom}`)] : [];
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header */}
             <div className="relative overflow-hidden shrink-0">
                 <div className="textured-navy p-4 pb-6 flex items-center gap-3 relative z-10">
                     <button onClick={onBack} className="text-white p-1" aria-label="Retour"><ArrowLeft size={24} /></button>
                     <div className="flex-1 min-w-0">
                         <h1 className="text-lg font-black text-white tracking-wide truncate">{info.name}</h1>
-                        <p className="text-white/60 text-xs font-bold">Section 1 — Informations générales</p>
+                        <p className="text-white/60 text-xs font-bold">Fiche projet complète</p>
                     </div>
-                    <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20"><FolderKanban size={22} className="text-primary-yellow" /></div>
+                    <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                        <FolderKanban size={22} className="text-primary-yellow" />
+                    </div>
                 </div>
                 <div className="absolute -bottom-3 left-0 right-0 h-6 bg-pastel rounded-t-[20px]" />
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 pt-2 pb-5" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-                <div className="flex items-center justify-between mb-4">
-                    <span className="text-[13px] font-bold text-slate-600 bg-white px-3 py-1.5 rounded-full shadow-md border border-slate-200">📅 Créé le {formatCreatedAt(project.createdAt)}</span>
-                    {hasChanges && <span className="text-[13px] font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 flex items-center gap-1"><Save size={12} /> Modifié</span>}
+            {/* Contenu scrollable */}
+            <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6">
+                {/* Date création */}
+                <div className="flex items-center justify-center mb-4">
+                    <span className="text-[12px] font-bold text-slate-500 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200">📅 Créé le {fmtDateTime(project.createdAt)}</span>
                 </div>
 
-                <div className="bg-gradient-to-br from-vibrant-blue to-blue-700 rounded-2xl p-4 mb-5 shadow-lg text-white">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Sparkles size={20} className="text-primary-yellow" /></div>
-                        <div className="flex-1 min-w-0"><h3 className="font-black text-lg truncate">{info.name}</h3><p className="text-white/90 text-sm font-bold">{info.sector}</p></div>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-white font-bold">
-                        {info.location && <span className="flex items-center gap-1"><MapPin size={13} /> {info.location}</span>}
-                        {info.duration && <span className="flex items-center gap-1"><Clock size={13} /> {info.duration}</span>}
-                    </div>
-                </div>
+                {/* ===================== SECTION 3 — ÉQUIPE EN PREMIER ===================== */}
+                <ProjectManagerSection manager={project.manager} onSave={onSaveManager} />
 
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="h-px flex-1 bg-yellow-400" /><span className="text-[13px] font-black text-yellow-600 uppercase tracking-widest">Détails du projet</span><div className="h-px flex-1 bg-yellow-400" />
-                </div>
-
-                <div className="space-y-3">
-                    {fieldConfig.map((field, index) => {
-                        const isEditing = editingField === field.id;
-                        const displayValue = field.id === "startDate" ? formatDate(info[field.id]) : info[field.id] || "Non renseigné";
-                        return (
-                            <div key={field.id} className="bg-white rounded-2xl p-4 shadow-md border border-slate-200 hover:shadow-lg transition-shadow" style={{ animationDelay: `${index * 50}ms` }}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-yellow-100 flex items-center justify-center">{field.icon}</div>
-                                        <span className="text-[13px] font-black text-yellow-600 uppercase tracking-wider">{field.label}</span>
-                                    </div>
-                                    {!isEditing && <button onClick={() => startEdit(field.id)} className="p-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors" aria-label={`Modifier ${field.label}`}><Pencil size={13} className="text-primary-yellow" /></button>}
-                                </div>
-                                {isEditing ? (
-                                    <div className="space-y-2">
-                                        {field.type === "textarea" ? (
-                                            <textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder={`Tape ton ${field.label.toLowerCase()}...`} rows={3} className="w-full p-3 rounded-xl border-2 border-yellow-400 bg-yellow-50 text-sm font-semibold text-slate-900 outline-none resize-none" autoFocus />
-                                        ) : field.type === "date" ? (
-                                            <input type="date" value={editValue} onChange={(e) => setEditValue(e.target.value)} title={field.label} className="w-full p-3 rounded-xl border-2 border-yellow-400 bg-yellow-50 text-sm font-semibold text-slate-900 outline-none" />
-                                        ) : (
-                                            <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder={`Tape ton ${field.label.toLowerCase()}...`} className="w-full p-3 rounded-xl border-2 border-yellow-400 bg-yellow-50 text-sm font-semibold text-slate-900 outline-none" autoFocus />
-                                        )}
-                                        <div className="flex gap-2">
-                                            <button onClick={confirmEdit} disabled={!editValue.trim()} className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5 transition-all ${editValue.trim() ? "bg-green-500 text-white active:scale-95 shadow-md" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}><Check size={14} /> Valider</button>
-                                            <button onClick={cancelEdit} className="flex-1 py-2.5 bg-slate-200 text-slate-700 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform"><X size={14} /> Annuler</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className={`text-[15px] font-bold leading-relaxed pl-9 ${info[field.id] ? "text-slate-900" : "text-slate-400 italic"}`}>{displayValue}</p>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Section 2 — Plan d'affaires */}
-                <div className="mt-6 mb-4">
+                {/* ===================== SECTION 1 — DÉTAILS DU PROJET ===================== */}
+                <div className="mt-4 mb-4">
                     <div className="flex items-center gap-2 mb-3">
-                        <div className="h-px flex-1 bg-yellow-400" /><span className="text-xs font-black text-yellow-600 uppercase tracking-widest">Section 2 — Plan d'affaires chiffré</span><div className="h-px flex-1 bg-yellow-400" />
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-yellow-400" />
+                        <span className="text-xs font-black text-yellow-600 uppercase tracking-widest px-1">Section 1 — Détails du projet</span>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-yellow-400" />
                     </div>
+
+                    {/* Hero card projet */}
+                    <div className="rounded-2xl overflow-hidden shadow-lg border border-yellow-100 mb-4">
+                        <div className="bg-gradient-to-br from-yellow-500 via-yellow-400 to-amber-500 p-5">
+                            <div className="flex items-start gap-3">
+                                <div className="w-14 h-14 rounded-2xl bg-white/30 border-2 border-white/40 flex items-center justify-center shrink-0">
+                                    <Sparkles size={26} className="text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-white font-black text-xl leading-tight">{info.name}</h2>
+                                    <p className="text-white/80 text-sm font-bold mt-0.5">{SECTOR_LABELS[info.sector] || info.sector}</p>
+                                    <div className="flex gap-3 mt-2 flex-wrap">
+                                        {info.location && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><MapPin size={11} /> {info.location}</span>}
+                                        {info.zone && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><Globe2 size={11} /> {info.zone}</span>}
+                                        {info.duration && <span className="text-white/90 text-xs font-bold flex items-center gap-1"><Clock size={11} /> {DURATION_LABELS[info.duration] || info.duration}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Champs en grille propre */}
+                        <div className="bg-white divide-y divide-slate-100">
+                            {info.startDate && (
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Calendar size={15} className="text-yellow-600" /></div>
+                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Date de démarrage</p><p className="text-sm font-bold text-slate-900">{fmtDate(info.startDate)}</p></div>
+                                </div>
+                            )}
+                            {info.description && (
+                                <div className="flex items-start gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><FileText size={15} className="text-yellow-600" /></div>
+                                    <div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Description</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{info.description}</p></div>
+                                </div>
+                            )}
+                            {info.objectives && (
+                                <div className="flex items-start gap-3 px-4 py-3">
+                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><Target size={15} className="text-yellow-600" /></div>
+                                    <div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{info.objectives}</p></div>
+                                </div>
+                            )}
+                        </div>
+                        {/* Footer secteur + infos clés */}
+                        <div className="bg-yellow-50 px-4 py-3 border-t border-yellow-100">
+                            <div className="flex items-center gap-2">
+                                <Building2 size={14} className="text-yellow-600" />
+                                <span className="text-xs font-black text-yellow-700">Secteur :</span>
+                                <span className="text-xs font-bold text-slate-700">{SECTOR_LABELS[info.sector] || info.sector || "Non renseigné"}</span>
+                            </div>
+                            <button onClick={() => { /* future edit mode */ }} className="mt-2 w-full py-2 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-yellow-100 transition-colors">
+                                <Edit3 size={12} /> Modifier les informations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ===================== SECTION 2 — PLAN D'AFFAIRES ===================== */}
+                <div className="mt-2 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-blue-400" />
+                        <span className="text-xs font-black text-blue-600 uppercase tracking-widest px-1">Section 2 — Plan d&apos;affaires chiffré</span>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-blue-400" />
+                    </div>
+
                     {bpData ? (() => {
                         const bp = bpData;
-                        const fmt = (v: number) => v.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
-                        const numFromPart = (s: string): number => { const a = s.includes(":") ? s.split(":").pop()! : s; const c = a.trim().replace(/\s/g, "").replace(/\./g, "").replace(/,/g, "."); const m = c.match(/\d+\.?\d*/); return m ? (parseFloat(m[0]) || 0) : 0; };
+                        const numFromPart = (s: string): number => { const a = s.includes(":") ? s.split(":").pop()! : s; const c = a.trim().replace(/\s/g, "").replace(/,/g, "."); const m = c.match(/\d+\.?\d*/); return m ? (parseFloat(m[0]) || 0) : 0; };
                         const num = (v: string | undefined | null): number => { if (!v) return 0; return String(v).split("/").reduce((t, p) => t + numFromPart(p), 0); };
-                        const nIM = num(bp.investissementMateriel), nII = num(bp.investissementImateriel), nFDR = num(bp.fondsDeRoulement), nFP = num(bp.fondsPropres), nE = num(bp.emprunt);
-                        const nTSR = num(bp.tauxSansRisque), nPS = num(bp.primeSectorielle), nPP = num(bp.primePays), nIS = num(bp.tauxIS), nDA = num(bp.dureeAmortissement);
-                        const nCV = num(bp.chargesVariables), nCF = num(bp.chargesFixes), nCFi = num(bp.chargesFinancieres), nInt = num(bp.tauxInteret);
+                        const nIM = num(bp.investissementMateriel), nII = num(bp.investissementImateriel), nFDR = num(bp.fondsDeRoulement);
+                        const nFP = num(bp.fondsPropres), nE = num(bp.emprunt), nTSR = num(bp.tauxSansRisque), nPS = num(bp.primeSectorielle), nPP = num(bp.primePays);
+                        const nIS = num(bp.tauxIS), nDA = num(bp.dureeAmortissement), nCV = num(bp.chargesVariables), nCF = num(bp.chargesFixes), nCFi = num(bp.chargesFinancieres);
                         const investTotal = nIM + nII + nFDR, finTotal = nFP + nE, tauxActu = nTSR + nPS + nPP, amortAnnuel = investTotal / (nDA || 5);
                         const caAnnees: number[] = bp.caAnnees ? JSON.parse(bp.caAnnees) : [];
-                        const txVar = nCV / 100, txFixe = nCF, txFi = nCFi, txIS2 = nIS / 100, txActu = tauxActu / 100;
+                        const txVar = nCV / 100, txIS2 = nIS / 100, txActu2 = tauxActu / 100;
                         let cumulFNT = 0, delaiRecup = -1;
                         const yearlyResults = caAnnees.map((ca: number, i: number) => {
-                            const cv = ca * txVar, mb = ca - cv, bai = mb - txFixe - txFi - amortAnnuel, imp = bai > 0 ? bai * txIS2 : 0;
-                            const bn = bai - imp, fnt = bn + amortAnnuel, fntA = fnt / Math.pow(1 + txActu, i + 1);
+                            const cv = ca * txVar, mb = ca - cv, bai = mb - nCF - nCFi - amortAnnuel, imp = bai > 0 ? bai * txIS2 : 0;
+                            const bn = bai - imp, fnt = bn + amortAnnuel, fntA = fnt / Math.pow(1 + txActu2, i + 1);
                             cumulFNT += fntA; if (delaiRecup === -1 && cumulFNT >= investTotal) delaiRecup = i + 1;
-                            return { annee: i + 1, ca, margeBrute: mb, bai, impot: imp, benefNet: bn, fnt, fntActu: fntA, cumulFNT };
+                            return { annee: i + 1, ca, margeBrute: mb, bai, impot: imp, benefNet: bn, fntActu: fntA };
                         });
-                        const van = cumulFNT - investTotal, benefTotal = yearlyResults.reduce((s: number, r: { benefNet: number }) => s + r.benefNet, 0);
+                        const van = cumulFNT - investTotal, benefTotal = yearlyResults.reduce((s, r) => s + r.benefNet, 0);
                         const roi = investTotal > 0 ? (benefTotal / investTotal * 100) : 0, ip = investTotal > 0 ? cumulFNT / investTotal : 0;
                         let tri = 0;
-                        for (let t = 1; t <= 100; t += 0.5) { let npv = -investTotal; caAnnees.forEach((ca: number, i: number) => { const cv2 = ca * txVar, bai2 = ca - cv2 - txFixe - txFi - amortAnnuel, imp2 = bai2 > 0 ? bai2 * txIS2 : 0; npv += ((bai2 - imp2) + amortAnnuel) / Math.pow(1 + t / 100, i + 1); }); if (npv < 0) { tri = t; break; } }
-
-                        const bpFields: { label: string; icon: React.ReactNode; key: keyof BusinessPlanData; value: string; montant: number; suffix?: string }[] = [
-                            { label: "Investissement matériel", icon: <Calculator size={16} className="text-primary-yellow" />, key: "investissementMateriel", value: bp.investissementMateriel, montant: nIM },
-                            { label: "Investissement immatériel", icon: <FileSpreadsheet size={16} className="text-primary-yellow" />, key: "investissementImateriel", value: bp.investissementImateriel, montant: nII },
-                            { label: "Fonds de roulement", icon: <PiggyBank size={16} className="text-primary-yellow" />, key: "fondsDeRoulement", value: bp.fondsDeRoulement, montant: nFDR },
-                            { label: "Fonds propres", icon: <CircleDollarSign size={16} className="text-primary-yellow" />, key: "fondsPropres", value: bp.fondsPropres, montant: nFP },
-                            { label: "Emprunt bancaire", icon: <Landmark size={16} className="text-primary-yellow" />, key: "emprunt", value: bp.emprunt, montant: nE },
-                            { label: "Taux d'intérêt", icon: <Percent size={16} className="text-primary-yellow" />, key: "tauxInteret", value: bp.tauxInteret, montant: nInt, suffix: "%" },
-                            { label: "Taux sans risque", icon: <TrendingUp size={16} className="text-primary-yellow" />, key: "tauxSansRisque", value: bp.tauxSansRisque, montant: nTSR, suffix: "%" },
-                            { label: "Prime sectorielle", icon: <BarChart3 size={16} className="text-primary-yellow" />, key: "primeSectorielle", value: bp.primeSectorielle, montant: nPS, suffix: "%" },
-                            { label: "Prime pays", icon: <CreditCard size={16} className="text-primary-yellow" />, key: "primePays", value: bp.primePays, montant: nPP, suffix: "%" },
-                            { label: "Impôt (IS)", icon: <Receipt size={16} className="text-primary-yellow" />, key: "tauxIS", value: bp.tauxIS, montant: nIS, suffix: "%" },
-                            { label: "Durée amortissement", icon: <Calculator size={16} className="text-primary-yellow" />, key: "dureeAmortissement", value: bp.dureeAmortissement, montant: nDA, suffix: " ans" },
-                            { label: "Charges variables", icon: <TrendingUp size={16} className="text-primary-yellow" />, key: "chargesVariables", value: bp.chargesVariables, montant: nCV, suffix: " % du CA" },
-                            { label: "Charges fixes annuelles", icon: <CreditCard size={16} className="text-primary-yellow" />, key: "chargesFixes", value: bp.chargesFixes, montant: nCF },
-                            { label: "Charges financières", icon: <Landmark size={16} className="text-primary-yellow" />, key: "chargesFinancieres", value: bp.chargesFinancieres, montant: nCFi },
-                        ];
-                        const displayFieldVal = (f: { montant: number; suffix?: string; value: string }) => { if (f.suffix) return `${f.montant}${f.suffix}`; if (f.montant > 0) return `${fmt(f.montant)} FCFA`; return f.value || "—"; };
+                        for (let t = 1; t <= 100; t += 0.5) { let npv = -investTotal; caAnnees.forEach((ca: number, i: number) => { const bai2 = ca - ca * txVar - nCF - nCFi - amortAnnuel, imp2 = bai2 > 0 ? bai2 * txIS2 : 0; npv += ((bai2 - imp2) + amortAnnuel) / Math.pow(1 + t / 100, i + 1); }); if (npv < 0) { tri = t; break; } }
 
                         return (
-                            <div className="space-y-3">
-                                <div className="bg-gradient-to-br from-vibrant-blue to-blue-700 rounded-2xl p-4 shadow-lg shadow-blue-500/20 text-white">
-                                    <div className="flex items-center gap-2 mb-3"><Calculator size={18} className="text-primary-yellow" /><span className="text-[17px] font-black uppercase tracking-wider text-white/80">Résumé financier</span></div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">Invest. total</p><p className="text-[21px] font-black">{investTotal > 0 ? fmt(investTotal) : "—"}</p><p className="text-[14px] text-white/50">FCFA</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">Financement</p><p className="text-[21px] font-black">{finTotal > 0 ? fmt(finTotal) : "—"}</p><p className="text-[14px] text-white/50">FCFA</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">Taux actualisation</p><p className="text-[21px] font-black text-primary-yellow">{tauxActu > 0 ? `${tauxActu.toFixed(1)}%` : "—"}</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">Amort. annuel</p><p className="text-[21px] font-black">{amortAnnuel > 0 ? fmt(amortAnnuel) : "—"}</p><p className="text-[14px] text-white/50">FCFA</p></div>
-                                    </div>
-                                </div>
-                                <div className="bg-gradient-to-br from-slate-500 to-slate-700 rounded-2xl p-4 shadow-lg shadow-slate-500/20 text-white">
-                                    <div className="flex items-center gap-2 mb-3"><BarChart3 size={18} className="text-primary-yellow" /><span className="text-[17px] font-black uppercase tracking-wider text-white/80">Indicateurs clés</span></div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">VAN</p><p className={`text-[21px] font-black ${van >= 0 ? "text-green-200" : "text-red-200"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p><p className="text-[14px] text-white/50">{van >= 0 ? "✅ Rentable" : "⚠️ Non rentable"}</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">TRI</p><p className="text-[21px] font-black text-primary-yellow">{tri.toFixed(1)}%</p><p className="text-[14px] text-white/50">Taux rentabilité</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">ROI</p><p className="text-[21px] font-black">{roi.toFixed(1)}%</p><p className="text-[14px] text-white/50">Retour invest.</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center"><p className="text-[15px] text-white/60 font-bold">IP</p><p className="text-[21px] font-black">{ip.toFixed(2)}</p><p className="text-[14px] text-white/50">{ip >= 1 ? "✅ IP≥1" : "⚠️ IP<1"}</p></div>
-                                        <div className="bg-white/10 rounded-xl p-3 text-center col-span-2"><p className="text-[15px] text-white/60 font-bold">⏱ Délai récupération</p><p className="text-[21px] font-black">{delaiRecup > 0 ? `${delaiRecup} an(s)` : "Non atteint"}</p></div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2"><div className="h-px flex-1 bg-yellow-400" /><span className="text-[13px] font-black text-yellow-600 uppercase tracking-widest">Données saisies</span><div className="h-px flex-1 bg-yellow-400" /></div>
-                                {bpFields.map((field) => {
-                                    const isEditingBp = editingBpField === field.key;
-                                    return (
-                                        <div key={field.key} className="bg-white rounded-2xl p-4 shadow-md border border-slate-200">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-lg bg-yellow-100 flex items-center justify-center">{field.icon}</div><span className="text-[13px] font-black text-yellow-600 uppercase tracking-wider">{field.label}</span></div>
-                                                {!isEditingBp && <button onClick={() => startBpEdit(field.key, field.value)} className="p-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors" aria-label={`Modifier ${field.label}`}><Pencil size={13} className="text-primary-yellow" /></button>}
+                            <div className="space-y-4">
+                                {/* KPIs principaux */}
+                                <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-100">
+                                    <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Calculator size={18} className="text-yellow-300" />
+                                            <span className="text-white font-black text-base">Résumé financier</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2.5">
+                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Invest. total</p>
+                                                <p className="text-xl font-black text-white">{investTotal > 0 ? fmt(investTotal) : "—"}</p>
+                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
                                             </div>
-                                            {isEditingBp ? (
-                                                <div className="space-y-2 pl-8">
-                                                    <input type="text" value={editBpValue} onChange={(e) => setEditBpValue(e.target.value)} placeholder={`Modifier ${field.label.toLowerCase()}...`} className="w-full p-3 rounded-xl border-2 border-yellow-400 bg-yellow-50 text-sm font-semibold text-slate-900 outline-none" autoFocus />
-                                                    <div className="flex gap-2">
-                                                        <button onClick={confirmBpEdit} disabled={!editBpValue.trim()} className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5 transition-all ${editBpValue.trim() ? "bg-green-500 text-white active:scale-95 shadow-md" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}><Check size={14} /> Valider</button>
-                                                        <button onClick={cancelBpEdit} className="flex-1 py-2.5 bg-slate-200 text-slate-700 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform"><X size={14} /> Annuler</button>
+                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Financement</p>
+                                                <p className="text-xl font-black text-white">{finTotal > 0 ? fmt(finTotal) : "—"}</p>
+                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
+                                            </div>
+                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Taux actualisation</p>
+                                                <p className="text-xl font-black text-yellow-300">{tauxActu > 0 ? `${tauxActu.toFixed(1)}%` : "—"}</p>
+                                            </div>
+                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Amort./an</p>
+                                                <p className="text-xl font-black text-white">{amortAnnuel > 0 ? fmt(amortAnnuel) : "—"}</p>
+                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Indicateurs clés */}
+                                <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+                                    <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <BarChart3 size={18} className="text-yellow-300" />
+                                            <span className="text-white font-black text-base">Indicateurs de rentabilité</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2.5">
+                                            <div className={`rounded-2xl p-3 text-center ${van >= 0 ? "bg-green-500/20 border border-green-400/30" : "bg-red-500/20 border border-red-400/30"}`}>
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">VAN</p>
+                                                <p className={`text-xl font-black ${van >= 0 ? "text-green-300" : "text-red-300"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p>
+                                                <p className="text-[10px] text-white/50">{van >= 0 ? "✅ Rentable" : "⚠️ Non rent."}</p>
+                                            </div>
+                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">TRI</p>
+                                                <p className="text-xl font-black text-yellow-300">{tri.toFixed(1)}%</p>
+                                                <p className="text-[10px] text-white/50">Taux rentabilité</p>
+                                            </div>
+                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">ROI</p>
+                                                <p className="text-xl font-black text-white">{roi.toFixed(1)}%</p>
+                                                <p className="text-[10px] text-white/50">Retour invest.</p>
+                                            </div>
+                                            <div className={`rounded-2xl p-3 text-center ${ip >= 1 ? "bg-green-500/20 border border-green-400/30" : "bg-red-500/20 border border-red-400/30"}`}>
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">IP</p>
+                                                <p className={`text-xl font-black ${ip >= 1 ? "text-green-300" : "text-red-300"}`}>{ip.toFixed(2)}</p>
+                                                <p className="text-[10px] text-white/50">{ip >= 1 ? "✅ IP≥1" : "⚠️ IP<1"}</p>
+                                            </div>
+                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20 col-span-2">
+                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">⏱ Délai de récupération</p>
+                                                <p className="text-2xl font-black text-white">{delaiRecup > 0 ? `${delaiRecup} an(s)` : "Non atteint"}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Données saisies (collapsible) */}
+                                <div className="rounded-2xl overflow-hidden shadow-md border border-blue-100">
+                                    <button onClick={() => setBpExpanded(!bpExpanded)} className="w-full flex items-center gap-3 p-4 bg-blue-50 text-left">
+                                        <FileSpreadsheet size={16} className="text-blue-600" />
+                                        <span className="font-black text-sm text-blue-700 flex-1">Données saisies &amp; CA prévisionnel</span>
+                                        {bpExpanded ? <ChevronUp size={16} className="text-blue-500" /> : <ChevronDown size={16} className="text-blue-500" />}
+                                    </button>
+                                    {bpExpanded && (
+                                        <div className="bg-white p-4 space-y-3">
+                                            {[
+                                                { label: "Invest. matériel", icon: <Calculator size={14} />, key: "investissementMateriel", val: bp.investissementMateriel, mont: nIM },
+                                                { label: "Invest. immatériel", icon: <FileSpreadsheet size={14} />, key: "investissementImateriel", val: bp.investissementImateriel, mont: nII },
+                                                { label: "Fonds de roulement", icon: <PiggyBank size={14} />, key: "fondsDeRoulement", val: bp.fondsDeRoulement, mont: nFDR },
+                                                { label: "Fonds propres", icon: <CircleDollarSign size={14} />, key: "fondsPropres", val: bp.fondsPropres, mont: nFP },
+                                                { label: "Emprunt bancaire", icon: <Landmark size={14} />, key: "emprunt", val: bp.emprunt, mont: nE },
+                                                { label: "Taux d'intérêt", icon: <Percent size={14} />, key: "tauxInteret", val: bp.tauxInteret, mont: num(bp.tauxInteret), suf: "%" },
+                                                { label: "Charges variables", icon: <TrendingUp size={14} />, key: "chargesVariables", val: bp.chargesVariables, mont: nCV, suf: "%" },
+                                                { label: "Charges fixes/an", icon: <CreditCard size={14} />, key: "chargesFixes", val: bp.chargesFixes, mont: nCF },
+                                                { label: "Charges financières", icon: <Landmark size={14} />, key: "chargesFinancieres", val: bp.chargesFinancieres, mont: nCFi },
+                                                { label: "Taux IS", icon: <Receipt size={14} />, key: "tauxIS", val: bp.tauxIS, mont: nIS, suf: "%" },
+                                                { label: "Durée amortissement", icon: <Calculator size={14} />, key: "dureeAmortissement", val: bp.dureeAmortissement, mont: nDA, suf: " ans" },
+                                                { label: "Taux sans risque", icon: <TrendingUp size={14} />, key: "tauxSansRisque", val: bp.tauxSansRisque, mont: nTSR, suf: "%" },
+                                                { label: "Prime sectorielle", icon: <BarChart3 size={14} />, key: "primeSectorielle", val: bp.primeSectorielle, mont: nPS, suf: "%" },
+                                                { label: "Prime pays", icon: <CreditCard size={14} />, key: "primePays", val: bp.primePays, mont: nPP, suf: "%" },
+                                            ].map((f) => {
+                                                const isEditing = editingBpField === f.key;
+                                                return (
+                                                    <div key={f.key} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
+                                                        {isEditing ? (
+                                                            <div className="space-y-1.5">
+                                                                <p className="text-[11px] font-black text-blue-600 uppercase tracking-wider">{f.label}</p>
+                                                                <input type="text" value={editBpValue} onChange={(e) => setEditBpValue(e.target.value)} inputMode="text" className="w-full p-2 rounded-lg border-2 border-blue-400 bg-white text-sm font-semibold text-slate-900 outline-none" autoFocus />
+                                                                <div className="flex gap-2">
+                                                                    <button onClick={confirmBpEdit} className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">✓ Valider</button>
+                                                                    <button onClick={() => { setEditingBpField(null); setEditBpValue(""); }} className="flex-1 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">✕ Annuler</button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-blue-600">{f.icon}</div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">{f.label}</p>
+                                                                    <p className="text-xs text-slate-500 font-semibold truncate">{f.val || "—"}</p>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <p className="text-sm font-black text-slate-900">{f.suf ? `${f.mont}${f.suf}` : f.mont > 0 ? fmt(f.mont) : "—"}</p>
+                                                                    {!f.suf && f.mont > 0 && <p className="text-[10px] text-slate-400">FCFA</p>}
+                                                                </div>
+                                                                <button onClick={() => startBpEdit(f.key, f.val)} className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 ml-1 shrink-0" aria-label={`Modifier ${f.label}`}><Edit3 size={12} className="text-blue-500" /></button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* CA prévisionnel */}
+                                            {caAnnees.length > 0 && (
+                                                <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                                                    <p className="text-[11px] font-black text-indigo-600 uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={12} /> CA prévisionnel</p>
+                                                    <div className="space-y-2">
+                                                        {caAnnees.map((val: number, i: number) => (
+                                                            <div key={i} className="bg-white rounded-xl px-3 py-2 border border-indigo-200 flex items-center gap-2">
+                                                                <span className="text-xs font-black text-white bg-indigo-600 rounded-full w-7 h-7 flex items-center justify-center shrink-0">A{i + 1}</span>
+                                                                {editingCaIndex === i ? (
+                                                                    <div className="flex-1 flex items-center gap-1.5">
+                                                                        <input type="text" value={editCaValue} onChange={(e) => setEditCaValue(e.target.value)} inputMode="numeric" title={`CA Année ${i + 1}`} className="flex-1 p-1.5 rounded-lg border-2 border-indigo-400 bg-white text-sm font-semibold text-slate-900 outline-none" autoFocus />
+                                                                        <button onClick={confirmCaEdit} className="p-1.5 rounded-lg bg-indigo-600 text-white text-[11px] font-bold" title="Valider">✓</button>
+                                                                        <button onClick={() => { setEditingCaIndex(null); }} className="p-1.5 rounded-lg bg-slate-200 text-slate-700 text-[11px]" title="Annuler">✕</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="flex-1 text-sm font-bold text-slate-900">{fmt(val)} FCFA</span>
+                                                                        <button onClick={() => startCaEdit(i, val)} className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors" aria-label={`Modifier CA Année ${i + 1}`}><Edit3 size={11} className="text-indigo-500" /></button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="pl-8 flex items-center justify-between"><p className="text-[13px] text-slate-600 font-semibold">{field.value || "—"}</p><p className="text-[17px] font-black text-blue-700">{displayFieldVal(field)}</p></div>
                                             )}
                                         </div>
-                                    );
-                                })}
-                                {caAnnees.length > 0 && (
-                                    <div className="bg-white rounded-2xl p-4 shadow-md border border-slate-200">
-                                        <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded-lg bg-yellow-100 flex items-center justify-center"><TrendingUp size={16} className="text-primary-yellow" /></div><span className="text-[13px] font-black text-yellow-600 uppercase tracking-wider">CA prévisionnel</span></div>
-                                        <div className="space-y-2 pl-8">
-                                            {caAnnees.map((val: number, i: number) => (
-                                                <div key={i} className="flex items-center justify-between gap-2">
-                                                    <span className="text-[13px] font-black text-white bg-blue-700 rounded-full w-7 h-7 flex items-center justify-center shrink-0">A{i + 1}</span>
-                                                    {editingCaIndex === i ? (
-                                                        <div className="flex-1 flex items-center gap-2">
-                                                            <input type="text" value={editCaValue} onChange={(e) => setEditCaValue(e.target.value)} placeholder="Nouveau CA..." title={`CA Année ${i + 1}`} className="flex-1 p-2 rounded-lg border-2 border-yellow-400 bg-yellow-50 text-sm font-semibold text-slate-900 outline-none" autoFocus />
-                                                            <button onClick={confirmCaEdit} disabled={!editCaValue.trim()} title="Valider" className={`p-1.5 rounded-lg ${editCaValue.trim() ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"}`}><Check size={14} /></button>
-                                                            <button onClick={cancelCaEdit} title="Annuler" className="p-1.5 rounded-lg bg-slate-200 text-slate-700"><X size={14} /></button>
-                                                        </div>
-                                                    ) : (<><span className="text-[17px] font-bold text-slate-900">{fmt(val)} FCFA</span><button onClick={() => startCaEdit(i, val)} className="p-1 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors shrink-0" aria-label={`Modifier CA Année ${i + 1}`}><Pencil size={12} className="text-primary-yellow" /></button></>)}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
+
+                                {/* Résultats par année */}
                                 {yearlyResults.length > 0 && (
-                                    <>
-                                        <div className="flex items-center gap-2"><div className="h-px flex-1 bg-yellow-400" /><span className="text-[13px] font-black text-yellow-600 uppercase tracking-widest">Détail par année</span><div className="h-px flex-1 bg-yellow-400" /></div>
-                                        {yearlyResults.map((r: { annee: number; ca: number; margeBrute: number; bai: number; impot: number; benefNet: number; fntActu: number }) => (
-                                            <div key={r.annee} className="bg-white rounded-2xl p-4 shadow-md border border-slate-200">
-                                                <div className="flex items-center justify-between mb-3"><span className="text-[13px] font-black text-white bg-blue-700 rounded-full w-8 h-8 flex items-center justify-center">A{r.annee}</span><span className="text-[17px] font-bold text-slate-900">CA : {fmt(r.ca)} FCFA</span></div>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between"><span className="text-[13px] text-yellow-600 font-semibold">Marge brute</span><b className="text-[14px] text-slate-900">{fmt(r.margeBrute)} FCFA</b></div>
-                                                    <div className="flex justify-between"><span className="text-[13px] text-yellow-600 font-semibold">Bénéfice Avant Impôt</span><b className="text-[14px] text-slate-900">{fmt(r.bai)} FCFA</b></div>
-                                                    <div className="flex justify-between"><span className="text-[13px] text-yellow-600 font-semibold">Impôt</span><b className="text-[14px] text-red-600">{fmt(r.impot)} FCFA</b></div>
-                                                    <div className="flex justify-between"><span className="text-[13px] text-yellow-600 font-semibold">Bénéfice net</span><b className={`text-[14px] ${r.benefNet >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(r.benefNet)} FCFA</b></div>
-                                                    <div className="flex justify-between"><span className="text-[13px] text-yellow-600 font-semibold">Flux Net de Trésorerie Actualisé</span><b className="text-[14px] text-blue-700">{fmt(r.fntActu)} FCFA</b></div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-px flex-1 bg-indigo-200" />
+                                            <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Détail par année</span>
+                                            <div className="h-px flex-1 bg-indigo-200" />
+                                        </div>
+                                        {yearlyResults.map((r) => (
+                                            <div key={r.annee} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-2.5 flex items-center justify-between">
+                                                    <span className="text-xs font-black text-white/80 uppercase">Année {r.annee}</span>
+                                                    <span className="text-sm font-black text-white">CA : {fmt(r.ca)} FCFA</span>
+                                                </div>
+                                                <div className="p-3 grid grid-cols-2 gap-2">
+                                                    <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Marge brute</p>
+                                                        <p className="text-sm font-black text-slate-900">{fmt(r.margeBrute)}</p>
+                                                    </div>
+                                                    <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">BAI</p>
+                                                        <p className={`text-sm font-black ${r.bai >= 0 ? "text-slate-900" : "text-red-600"}`}>{fmt(r.bai)}</p>
+                                                    </div>
+                                                    <div className="bg-red-50 rounded-xl p-2 text-center">
+                                                        <p className="text-[10px] font-bold text-red-500 uppercase">Impôt</p>
+                                                        <p className="text-sm font-black text-red-700">{fmt(r.impot)}</p>
+                                                    </div>
+                                                    <div className={`rounded-xl p-2 text-center ${r.benefNet >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                                                        <p className="text-[10px] font-bold uppercase text-slate-500">Bénéfice net</p>
+                                                        <p className={`text-sm font-black ${r.benefNet >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(r.benefNet)}</p>
+                                                    </div>
+                                                    <div className="bg-blue-50 rounded-xl p-2 text-center col-span-2">
+                                                        <p className="text-[10px] font-bold text-blue-500 uppercase">FNT Actualisé</p>
+                                                        <p className="text-sm font-black text-blue-700">{fmt(r.fntActu)} FCFA</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         );
                     })() : (
-                        <button onClick={onStartBusinessPlan} className="w-full p-4 rounded-2xl bg-gradient-to-r from-vibrant-blue to-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"><Sparkles size={18} />Commencer le Plan d'affaires chiffré</button>
+                        <button onClick={onStartBusinessPlan} className="w-full p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+                            <Sparkles size={18} className="text-yellow-300" /> Commencer le Plan d&apos;affaires chiffré
+                        </button>
+                    )}
+
+                    {/* Supprimer plan d'affaires */}
+                    {bpData && (
+                        <div className="mt-4">
+                            {!showDeleteBpConfirm ? (
+                                <button onClick={() => setShowDeleteBpConfirm(true)} className="w-full p-3 rounded-2xl border-2 border-dashed border-orange-200 text-orange-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-orange-50 transition-colors">
+                                    <Trash2 size={14} /> Supprimer le plan d&apos;affaires
+                                </button>
+                            ) : (
+                                <div className="bg-orange-50 rounded-2xl p-4 border border-orange-200">
+                                    <p className="text-sm font-black text-orange-700 flex items-center gap-2 mb-1"><AlertTriangle size={16} /> Supprimer le plan d&apos;affaires ?</p>
+                                    <p className="text-xs text-orange-500 mb-3">Toutes les données financières seront supprimées.</p>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => { setBpData(null); onDeleteBusinessPlan(); setShowDeleteBpConfirm(false); }} className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1"><Trash2 size={12} /> Supprimer</button>
+                                        <button onClick={() => setShowDeleteBpConfirm(false)} className="flex-1 py-2.5 bg-white text-slate-600 rounded-xl text-xs font-bold border border-slate-200">Annuler</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
-                {bpData && (
-                    <div className="mt-4 mb-4">
-                        <div className="flex items-center gap-2 mb-3"><div className="h-px flex-1 bg-orange-200" /><span className="text-xs font-black text-orange-400 uppercase tracking-widest">Plan d'affaires</span><div className="h-px flex-1 bg-orange-200" /></div>
-                        {!showDeleteBpConfirm ? (
-                            <button onClick={() => setShowDeleteBpConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/50 text-orange-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500 transition-all"><Trash2 size={16} />Supprimer le plan d'affaires</button>
-                        ) : (
-                            <div className="bg-orange-50 rounded-2xl p-4 border-2 border-orange-200">
-                                <div className="flex items-center gap-2 mb-3"><AlertTriangle size={20} className="text-orange-500" /><span className="text-sm font-black text-orange-700">Supprimer le plan d'affaires ?</span></div>
-                                <p className="text-xs text-orange-500 mb-4 font-semibold">Toutes les données financières seront supprimées. Les infos du projet seront conservées.</p>
-                                <div className="flex gap-2">
-                                    <button onClick={() => { setBpData(null); onDeleteBusinessPlan(); setShowDeleteBpConfirm(false); }} className="flex-1 py-3 bg-orange-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-md shadow-orange-500/30"><Trash2 size={14} /> Oui, supprimer</button>
-                                    <button onClick={() => setShowDeleteBpConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform border border-slate-200"><X size={14} /> Annuler</button>
-                                </div>
-                            </div>
-                        )}
+                {/* ===================== SECTION 4 — TÂCHES ===================== */}
+                <ProjectTasksSection tasks={project.tasks} projectMembers={teamMembers} onSave={onSaveTasks} />
+
+                {/* Zone danger */}
+                <div className="mt-4 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="h-px flex-1 bg-red-200" />
+                        <span className="text-xs font-black text-red-400 uppercase tracking-widest">Zone danger</span>
+                        <div className="h-px flex-1 bg-red-200" />
                     </div>
-                )}
-
-                {/* Section 3 — Responsable du projet */}
-                <ProjectManagerSection
-                    manager={project.manager}
-                    onSave={onSaveManager}
-                />
-
-                {/* Section 4 — Tâches du projet */}
-                <ProjectTasksSection
-                    tasks={project.tasks}
-                    projectMembers={project.manager ? [project.manager.nomComplet] : []}
-                    onSave={onSaveTasks}
-                />
-
-                <div className="mt-6 mb-4">
-                    <div className="flex items-center gap-2 mb-3"><div className="h-px flex-1 bg-red-200" /><span className="text-xs font-black text-red-400 uppercase tracking-widest">Zone danger</span><div className="h-px flex-1 bg-red-200" /></div>
                     {!showDeleteConfirm ? (
-                        <button onClick={() => setShowDeleteConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/50 text-red-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-500 transition-all"><Trash2 size={16} />Supprimer ce projet</button>
+                        <button onClick={() => setShowDeleteConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/50 text-red-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
+                            <Trash2 size={16} /> Supprimer ce projet
+                        </button>
                     ) : (
-                        <div className="bg-red-50 rounded-2xl p-4 border-2 border-red-200">
-                            <div className="flex items-center gap-2 mb-3"><AlertTriangle size={20} className="text-red-500" /><span className="text-sm font-black text-red-700">Confirmer la suppression ?</span></div>
-                            <p className="text-xs text-red-500 mb-4 font-semibold">Cette action est irréversible. Toutes les données du projet seront perdues.</p>
+                        <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                            <p className="text-sm font-black text-red-700 flex items-center gap-2 mb-1"><AlertTriangle size={16} /> Confirmer la suppression ?</p>
+                            <p className="text-xs text-red-500 mb-3 font-semibold">Action irréversible. Toutes les données seront perdues.</p>
                             <div className="flex gap-2">
-                                <button onClick={handleDelete} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-md shadow-red-500/30"><Trash2 size={14} /> Oui, supprimer</button>
-                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform border border-slate-200"><X size={14} /> Annuler</button>
+                                <button onClick={() => onDelete(project.id)} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-red-500/30"><Trash2 size={13} /> Oui, supprimer</button>
+                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold border border-slate-200">Annuler</button>
                             </div>
                         </div>
                     )}

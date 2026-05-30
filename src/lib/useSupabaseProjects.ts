@@ -13,11 +13,21 @@ export interface ProjectInfo {
     objectives: string;
 }
 
+export interface ProjectMember {
+    id: string;
+    nom: string;
+    prenom: string;
+    contact: string;
+    role: string;
+}
+
 export interface ProjectManager {
     nomComplet: string;
     contact: string;
     role: string;
     niveauAcces: "administrateur" | "editeur" | "lecteur";
+    membres?: ProjectMember[];
+    partenaires?: ProjectMember[];
 }
 
 export interface ProjectTask {
