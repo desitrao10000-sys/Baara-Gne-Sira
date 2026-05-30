@@ -173,6 +173,77 @@ const questions: Question[] = [
     },
 ];
 
+// ─── Moteur d'aide LOCAL (fonctionne sans API) ─────────────────
+const localHelpDB: Record<string, { keywords: string[]; answer: string }[]> = {
+    name: [
+        { keywords: ["nom", "appelle", "comment", "choisir"], answer: "📛 **Comment bien nommer ton projet :**\n\n• Choisis un nom **court et mémorable**\n• Il doit refléter ton activité\n• Évite les noms trop compliqués\n\n💡 **Exemples :**\n• Commerce → « Djiguifa Commerce »\n• Agriculture → « Sahel Agro »\n• Tech → « Mali Tech Solutions »\n• Restaurant → « Saveurs du Burkina »" },
+        { keywords: ["exemple", "suggestion", "idée"], answer: "💡 **Exemples de noms par secteur :**\n\n🛒 Commerce : « Afrika Market », « Terroir Distribution »\n🌾 Agriculture : « Sahel Agro », « Fertilland »\n💼 Service : « ProConsult Africa », « Expert Plus »\n🍽️ Restauration : « Saveurs d'Afrique », « Déguster »\n💻 Tech : « Digital Mali », « InnovaTech BF »\n🐄 Élevage : « Ranch Moderne », « Bétail Plus »" },
+    ],
+    sector: [
+        { keywords: ["secteur", "domaine", "activité", "quoi"], answer: "🏢 **Comment choisir ton secteur :**\n\nChoisis le domaine **principal** de ton activité :\n\n🛒 **Commerce** → Achat-revente de marchandises\n🌾 **Agriculture** → Culture de produits agricoles\n💼 **Service** → Conseil, formation, prestation\n🏭 **Industrie** → Transformation, production\n🐄 **Élevage** → Animaux, volailles, poissons\n🪵 **Artisanat** → Fabrication artisanale\n🚚 **Transport** → Livraison, déplacement\n💻 **Technologie** → Digital, IT, web\n🏥 **Santé** → Pharmacie, clinique, soins\n📚 **Éducation** → Formation, école\n🍽️ **Restauration** → Restaurant, cantine\n🏗️ **Bâtiment** → Construction, travaux" },
+        { keywords: ["hésite", "sais pas", "confon"], answer: "🤔 **Tu hésites entre deux secteurs ?**\n\nChoisis celui qui représente **ta principale source de revenus** :\n\n• Si tu **achètes et revends** → 🛒 Commerce\n• Si tu **produis/transformes** → 🏭 Industrie\n• Si tu **cultives** → 🌾 Agriculture\n• Si tu **conseilles/formes** → 💼 Service" },
+    ],
+    location: [
+        { keywords: ["où", "localisation", "ville", "lieu", "emplacement"], answer: "📍 **Où baser ton projet ?**\n\nIndique la **ville principale** où ton activité sera basée.\n\n💡 **Conseils :**\n• Sois précis : « Ouagadougou, Ouaga 2000 »\n• Inclis le pays si nécessaire\n• Choisis là où tes **clients** sont nombreux\n\n📋 **Exemples :**\n• « Ouagadougou, Burkina Faso »\n• « Bamako, ACI 2000, Mali »\n• « Abidjan, Cocody, Côte d'Ivoire »" },
+        { keywords: ["chez", "domicile", "maison", "quartier"], answer: "🏠 **Travailler chez soi, c'est possible !**\n\nBeaucoup d'entrepreneurs commencent à domicile.\nIndique simplement ton quartier ou ville.\n\n💡 Exemple : « Ouagadougou, Koulouba »" },
+    ],
+    zone: [
+        { keywords: ["zone", "territoire", "couverture", "intervention"], answer: "🌍 **Quelle zone d'intervention ?**\n\nC'est la zone géographique que tu couvres :\n\n📍 **Quartier/Village** → Activité très locale\n🏘️ **Commune** → Rayonnement communal\n🗺️ **Régionale** → Plusieurs villes d'une région\n🌍 **Nationale** → Tout le pays\n🌐 **Sous-régionale** → Plusieurs pays (UEMOA)\n\n💡 **Conseil :** Commence petit et élargis ta zone ensuite !" },
+    ],
+    startDate: [
+        { keywords: ["quand", "date", "commencer", "démarrer", "début"], answer: "📅 **Quand démarrer ton projet ?**\n\nChoisis une date réaliste en tenant compte de :\n\n⏰ **Préparation** → Temps pour trouver local, équipements\n💰 **Financement** → Délai pour obtenir un prêt\n📄 **Administratif** → Registre de commerce, autorisations\n\n💡 **Conseil :** Prévois 1 à 3 mois de préparation avant le démarrage réel." },
+    ],
+    duration: [
+        { keywords: ["combien", "temps", "durée", "long", "années"], answer: "⏱️ **Quelle durée pour ton projet ?**\n\n📋 **Guide par type de projet :**\n\n• **Commerce** → 1 à 3 ans\n• **Agriculture** → 3 à 5 ans (cycle des récoltes)\n• **Élevage** → 2 à 5 ans\n• **Service** → 1 à 3 ans\n• **Industrie** → 3 à 5 ans\n• **Tech** → 1 à 3 ans\n\n💡 **Conseil :** Les banques préfèrent les projets de **3 à 5 ans**. C'est assez long pour montrer la rentabilité." },
+    ],
+    description: [
+        { keywords: ["décrir", "expliquer", "quoi", "comment", "expliq"], answer: "📝 **Comment décrire ton projet :**\n\nUtilise cette formule simple :\n\n1️⃣ **Quoi** → Ton activité principale\n2️⃣ **Comment** → Ta méthode/produit\n3️⃣ **Pour qui** → Tes clients cibles\n\n💡 **Exemple :**\n« Transformation de fruits locaux en jus naturels, vendus en bouteilles dans les marchés et supermarchés de Ouagadougou. Clients : ménages et restaurants. »\n\n✅ **Sois précis et concret !**" },
+        { keywords: ["restaurant", "restauration", "manger", "cuisine"], answer: "🍽️ **Exemple de description pour un restaurant :**\n\n« Restaurant de cuisine locale et moderne, proposant des repas traditionnels burkinabè à des prix abordables. Situé en centre-ville, nous servons 50-80 couverts par jour avec un service rapide et de qualité. Clientèle : employés de bureau et étudiants. »" },
+        { keywords: ["commerce", "vendre", "vente", "boutique"], answer: "🛒 **Exemple de description pour un commerce :**\n\n« Boutique de vente de produits de première nécessité et de boissons dans le quartier Koulouba. Approvisionnement depuis les grossistes de Ouagadougou. Vente au détail et demi-gros. Clientèle locale : ménages et petits commerces. »" },
+        { keywords: ["agricult", "ferme", "culture", "champ"], answer: "🌾 **Exemple de description pour l'agriculture :**\n\n« Exploitation agricole de 5 hectares dédiée à la culture du maïs et du niébé en saison des pluies, avec un système d'irrigation pour le maraîchage en saison sèche. Production vendue aux marchés locaux et aux revendeurs. »" },
+    ],
+    objectives: [
+        { keywords: ["objectif", "but", "atteindre", "résultat", "quoi"], answer: "🎯 **Comment fixer tes objectifs :**\n\nPense à 3-4 objectifs **mesurables** :\n\n💰 **Financier** → Chiffre d'affaires visé\n👥 **Social** → Emplois créés\n🏆 **Marché** → Position concurrentielle\n🌐 **Expansion** → Croissance géographique\n\n💡 **Exemple :**\n1. Atteindre 10M FCFA de CA la 1ère année\n2. Créer 5 emplois permanents\n3. Devenir leader local en 3 ans\n4. Exporter vers la Côte d'Ivoire en année 2" },
+        { keywords: ["chiffre", "affaires", "CA", "million", "argent"], answer: "💰 **Quel chiffre d'affaires viser ?**\n\n📋 **Guide par secteur (1ère année) :**\n\n• Petit commerce → 2 à 5M FCFA\n• Restaurant → 5 à 15M FCFA\n• Service/Bureau → 3 à 10M FCFA\n• Agriculture → 3 à 10M FCFA\n• Industrie/Production → 10 à 30M FCFA\n\n💡 **Conseil :** Sois réaliste mais ambitieux ! Un banquier veut voir que ton projet est rentable." },
+        { keywords: ["emploi", "embauche", "personnel", "recruter"], answer: "👥 **Combien d'emplois créer ?**\n\nC'est un **argument fort** pour les banques et les pouvoirs publics !\n\n📋 **Guide :**\n• Micro-entreprise → 1 à 3 emplois\n• Petite entreprise → 3 à 10 emplois\n• Moyenne entreprise → 10 à 50 emplois\n\n💡 Inclus les emplois **directs** (tes employés) et **indirects** (fournisseurs, transporteurs)." },
+    ],
+};
+
+function getLocalHelp(sectionId: string, query: string): string | null {
+    const lower = query.toLowerCase().trim();
+    const rules = localHelpDB[sectionId];
+    if (!rules) return null;
+
+    // Chercher le meilleur match
+    let bestMatch: string | null = null;
+    let bestScore = 0;
+
+    for (const rule of rules) {
+        const score = rule.keywords.filter(kw => lower.includes(kw)).length;
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = rule.answer;
+        }
+    }
+
+    return bestMatch;
+}
+
+// Réponse par défaut si aucun match local
+function getDefaultHelp(sectionId: string): string {
+    const defaults: Record<string, string> = {
+        name: "📛 **Nom du projet**\nChoisis un nom court, mémorable et professionnel qui reflète ton activité.\n\n💡 Pose une question précise comme « comment choisir un bon nom » ou « donne-moi des exemples ».",
+        sector: "🏢 **Secteur d'activité**\nSélectionne le domaine principal de ton activité.\n\n💡 Pose une question comme « quels sont les secteurs disponibles » ou « je ne sais pas lequel choisir ».",
+        location: "📍 **Localisation**\nIndique la ville ou quartier principal de ton projet.\n\n💡 Pose une question comme « où dois-je m'installer » pour plus d'aide.",
+        zone: "🌍 **Zone d'intervention**\nDéfinis la zone géographique que tu couvres.\n\n💡 Pose une question comme « quelle zone choisir » pour plus d'aide.",
+        startDate: "📅 **Date de démarrage**\nChoisis une date réaliste en tenant compte du temps de préparation.\n\n💡 Pose une question comme « quand démarrer » pour plus d'aide.",
+        duration: "⏱️ **Durée du projet**\nPrévois une durée cohérente avec ton secteur d'activité.\n\n💡 Pose une question comme « combien de temps » pour plus d'aide.",
+        description: "📝 **Description du projet**\nDécris clairement ce que tu fais, comment et pour qui.\n\n💡 Pose une question comme « comment décrire mon projet » pour plus d'aide.",
+        objectives: "🎯 **Objectifs**\nFixe 3-4 objectifs mesurables (CA, emplois, marché).\n\n💡 Pose une question comme « quels objectifs fixer » pour plus d'aide.",
+    };
+    return defaults[sectionId] || "💡 Pose une question précise pour obtenir de l'aide sur cette section !";
+}
+
 interface ProjectCreationWizardProps {
     onComplete: (project: ProjectInfo) => void;
     onCancel: () => void;
@@ -201,6 +272,15 @@ export default function ProjectCreationWizard({
 
     const handleHelp = async () => {
         if (!helpQuery.trim()) return;
+
+        // ① Essayer le moteur LOCAL en premier (toujours disponible)
+        const localAnswer = getLocalHelp(currentQuestion.id, helpQuery);
+        if (localAnswer) {
+            setHelpResponse(localAnswer);
+            return;
+        }
+
+        // ② Sinon, essayer l'API Gemini en fallback
         setHelpLoading(true);
         try {
             const res = await fetch("/api/gemini-project-help", {
@@ -208,9 +288,17 @@ export default function ProjectCreationWizard({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ query: helpQuery, sectionId: currentQuestion.id, sectionTitle: currentQuestion.question }),
             });
-            if (res.ok) { const d = await res.json(); setHelpResponse(d.response); }
-            else setHelpResponse("❌ Erreur de connexion. Reformule ta question.");
-        } catch { setHelpResponse("❌ Erreur réseau. Vérifie ta connexion."); }
+            if (res.ok) {
+                const d = await res.json();
+                setHelpResponse(d.response);
+            } else {
+                // ③ Si API échoue, afficher l'aide par défaut
+                setHelpResponse(getDefaultHelp(currentQuestion.id));
+            }
+        } catch {
+            // ④ Si réseau échoue, afficher l'aide par défaut
+            setHelpResponse(getDefaultHelp(currentQuestion.id));
+        }
         setHelpLoading(false);
     };
 
