@@ -6,50 +6,92 @@ const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
 const GEMINI_URL = (model: string) =>
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
-const EXTRACTION_PROMPT = `Tu es un assistant expert en analyse de documents de projets entrepreneuriaux en Afrique. On te fournit un document (PDF, Word ou image) contenant des informations sur un projet ou plan d'affaires.
+const EXTRACTION_PROMPT = `Tu es un analyste financier et expert en business plan TRÈS rigoureux. Tu reçois un document (PDF, Word ou image) contenant un projet ou plan d'affaires.
 
-TA MISSION :
-1. Lis et analyse attentivement le document
-2. Extrais TOUTES les informations pertinentes pour remplir les sections d'un projet
-3. Structure ta réponse en JSON STRICT
+⚡ MISSION CRITIQUE ⚡
+Tu dois extraire ABSOLUMENT TOUTE les informations du document. Prends ton temps, lis le document ENTIER mot par mot, ligne par ligne, page par page.
 
-RÈGLES :
-- Réponds UNIQUEMENT en JSON valide (pas de texte avant/après)
-- Si une info n'est pas dans le document, mets la valeur à null
-- Les montants doivent être des nombres sans espaces ni symboles
-- Sois précis et exhaustif
+MÉTHODE DE TRAVAIL :
+1. LIS le document EN ENTIER d'abord sans rien extraire
+2. RELIS une 2ème fois en cherchant chaque champ un par un
+3. RELIS une 3ème fois pour vérifier les montants et chiffres
+4. EXTRAIS les informations dans le format JSON
 
-FORMAT JSON ATTENDU :
+CHAMPS À CHERCHER ET OÙ LES TROUVER :
+
+📊 SECTION INFORMATIONS PROJET :
+- "nom" : Le nom/titre du projet. Cherche en haut du document, page de garde, en-têtes
+- "secteur" : Le secteur d'activité (commerce, agriculture, service, industrie, élevage, artisanat, transport, technologie, santé, éducation, restauration, bâtiment)
+- "localisation" : Ville, commune, quartier, pays. Cherche les adresses
+- "zone" : Zone géographique couverte (région, pays, zone)
+- "dateDemarrage" : Date de début/lancement du projet
+- "duree" : Durée du projet (en mois ou années)
+- "description" : Résumé détaillé de l'activité. Cherche "présentation", "description", "résumé du projet"
+- "objectifs" : Buts et objectifs. Cherche "objectifs", "but", "finalité", "vision"
+
+💰 SECTION INVESTISSEMENT :
+- "investissementMateriel" : Équipements, machines, véhicules, mobilier, outils. Cherche "investissement", "équipement", "matériel", "immobilisation", "actif"
+- "investissementImateriel" : Formation, études, frais juridiques, licences, R&D. Cherche "immatériel", "frais", "étude", "formation"
+- "fondsDeRoulement" : Trésorerie de départ, stock initial. Cherche "fonds de roulement", "BFR", "trésorerie", "stock", "besoin en fonds"
+
+💵 SECTION FINANCEMENT :
+- "fondsPropres" : Apport personnel de l'entrepreneur. Cherche "apport", "fonds propres", "capital personnel", "épargne"
+- "emprunt" : Montant du prêt bancaire. Cherche "emprunt", "crédit", "prêt", "financement bancaire"
+
+📈 SECTION EXPLOITATION :
+- "chargesVariables" : Pourcentage des charges variables. Cherche "charges variables", "CV", "matières premières", "coût variable"
+- "chargesFixes" : Montant annuel des charges fixes. Cherche "charges fixes", "CF", "loyer", "salaires fixes"
+- "chargesFinancieres" : Intérêts d'emprunt. Cherche "charges financières", "intérêts", "annuités"
+- "tauxIS" : Taux d'impôt. Cherche "IS", "impôt", "taxe", "30%", "25%"
+- "dureeAmortissement" : Durée en années. Cherche "amortissement", "durée de vie"
+- "caAnnees" : Chiffre d'affaires par année. Cherche "CA", "chiffre d'affaires", "recettes", "ventes prévues"
+
+👥 SECTION ÉQUIPE :
+- "responsables" : Noms des dirigeants, fondateurs, gérants. Cherche "promoteur", "fondateur", "gérant", "directeur", "responsable", "chef d'entreprise", "entrepreneur"
+- "risques" : Risques identifiés. Cherche "risque", "menace", "difficulté"
+
+RÈGLES ABSOLUES :
+- Réponds UNIQUEMENT en JSON valide (rien d'autre, pas de markdown)
+- Si un champ n'est vraiment nulle part, mets null
+- Les montants en NOMBRES uniquement (pas d'espaces ni symboles) : 5000000 pas "5 000 000 FCFA"
+- Les pourcentages en NOMBRES : 25 pas "25%"
+- Pour "caAnnees", mets un tableau : [1500000, 2000000, 2500000]
+- CONFANCE : évalue honnêtement le % d'infos trouvées (0-100)
+- NE LAISSE AUCUN CHAMP À null SI L'INFO EST DANS LE DOCUMENT
+- Cherche les informations IMPLICITES aussi (ex: si "5 tables à 50 000F" = investissement matériel 250000)
+- CALCULE les totaux si les montants sont détaillés ligne par ligne
+
+FORMAT JSON STRICT :
 {
-  "resume": "Résumé du document en 2-3 phrases",
+  "resume": "Résumé du document en 3-4 phrases détaillées",
   "sections": {
-    "nom": "Nom du projet ou null",
-    "secteur": "Secteur d'activité ou null",
-    "localisation": "Ville, pays ou null",
-    "zone": "Zone d'intervention ou null",
-    "dateDemarrage": "Date de démarrage ou null",
-    "duree": "Durée du projet ou null",
-    "description": "Description détaillée du projet ou null",
-    "objectifs": "Objectifs du projet ou null",
-    "investissementMateriel": "Montant ou null",
-    "investissementImateriel": "Montant ou null",
-    "fondsDeRoulement": "Montant ou null",
-    "fondsPropres": "Montant ou null",
-    "emprunt": "Montant ou null",
-    "chargesVariables": "Pourcentage ou null",
-    "chargesFixes": "Montant annuel ou null",
-    "chargesFinancieres": "Montant ou null",
-    "tauxIS": "Pourcentage ou null",
-    "dureeAmortissement": "Nombre d'années ou null",
-    "caAnnees": [montant_annee1, montant_annee2, ...] ou null,
-    "responsables": ["Nom1", "Nom2"] ou null,
-    "risques": "Risques identifiés ou null"
+    "nom": "string ou null",
+    "secteur": "string ou null",
+    "localisation": "string ou null",
+    "zone": "string ou null",
+    "dateDemarrage": "string ou null",
+    "duree": "string ou null",
+    "description": "string ou null",
+    "objectifs": "string ou null",
+    "investissementMateriel": nombre ou null,
+    "investissementImateriel": nombre ou null,
+    "fondsDeRoulement": nombre ou null,
+    "fondsPropres": nombre ou null,
+    "emprunt": nombre ou null,
+    "chargesVariables": nombre ou null,
+    "chargesFixes": nombre ou null,
+    "chargesFinancieres": nombre ou null,
+    "tauxIS": nombre ou null,
+    "dureeAmortissement": nombre ou null,
+    "caAnnees": [nombre] ou null,
+    "responsables": ["string"] ou null,
+    "risques": "string ou null"
   },
-  "champsManquants": ["liste des sections non trouvées dans le document"],
+  "champsManquants": ["liste des champs non trouvés"],
   "confiance": 85
 }
 
-Analyse ce document et extrais les informations :`;
+Prends tout le temps nécessaire. Analyse ce document de façon EXHAUSTIVE :`;
 
 export async function POST(request: NextRequest) {
     try {
@@ -77,9 +119,9 @@ export async function POST(request: NextRequest) {
                         ]
                     }],
                     generationConfig: {
-                        temperature: 0.2,
-                        maxOutputTokens: 8192,
-                        topP: 0.9,
+                        temperature: 0.1,
+                        maxOutputTokens: 65536,
+                        topP: 0.95,
                     }
                 };
 

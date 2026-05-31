@@ -286,7 +286,7 @@ export default function DocumentUploadFlow({ onComplete, onCancel }: Props) {
                         </p>
                         <div className="flex items-center gap-2 text-purple-500">
                             <Sparkles size={16} className="animate-pulse" />
-                            <span className="text-xs font-bold">Patience, ça prend environ 10-30 secondes...</span>
+                            <span className="text-xs font-bold">L'IA analyse le document en profondeur, ça peut prendre 1-2 minutes...</span>
                         </div>
                     </div>
                 )}
