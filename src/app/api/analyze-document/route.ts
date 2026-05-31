@@ -6,64 +6,129 @@ const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
 const GEMINI_URL = (model: string) =>
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
-const EXTRACTION_PROMPT = `Tu es un analyste financier et expert en business plan TRÈS rigoureux. Tu reçois un document (PDF, Word ou image) contenant un projet ou plan d'affaires.
+const EXTRACTION_PROMPT = `Tu es un analyste financier SENIOR et expert en business plan. Tu reçois un document (PDF, Word ou image) contenant un projet ou plan d'affaires.
 
 ⚡ MISSION CRITIQUE ⚡
-Tu dois extraire ABSOLUMENT TOUTE les informations du document. Prends ton temps, lis le document ENTIER mot par mot, ligne par ligne, page par page.
+Tu dois extraire ABSOLUMENT TOUTE les informations du document, y compris les plus petits détails. Prends tout le temps nécessaire.
 
-MÉTHODE DE TRAVAIL :
+MÉTHODE DE TRAVAIL OBLIGATOIRE :
 1. LIS le document EN ENTIER d'abord sans rien extraire
 2. RELIS une 2ème fois en cherchant chaque champ un par un
-3. RELIS une 3ème fois pour vérifier les montants et chiffres
-4. EXTRAIS les informations dans le format JSON
+3. RELIS une 3ème fois pour les montants, chiffres, pourcentages
+4. RELIS une 4ème fois pour les noms, contacts, adresses, téléphones, emails
+5. RELIS une 5ème fois pour les dates, délais, échéances
+6. EXTRAIS tout dans le format JSON
 
-CHAMPS À CHERCHER ET OÙ LES TROUVER :
+📋 LISTE EXHAUSTIVE DES CHAMPS À CHERCHER :
 
-📊 SECTION INFORMATIONS PROJET :
-- "nom" : Le nom/titre du projet. Cherche en haut du document, page de garde, en-têtes
-- "secteur" : Le secteur d'activité (commerce, agriculture, service, industrie, élevage, artisanat, transport, technologie, santé, éducation, restauration, bâtiment)
-- "localisation" : Ville, commune, quartier, pays. Cherche les adresses
-- "zone" : Zone géographique couverte (région, pays, zone)
-- "dateDemarrage" : Date de début/lancement du projet
-- "duree" : Durée du projet (en mois ou années)
-- "description" : Résumé détaillé de l'activité. Cherche "présentation", "description", "résumé du projet"
-- "objectifs" : Buts et objectifs. Cherche "objectifs", "but", "finalité", "vision"
+--- INFORMATIONS GÉNÉRALES DU PROJET ---
+- "nom" : Nom/titre du projet. Cherche en page de garde, en-tête, haut du document
+- "secteur" : Secteur d'activité exact. Cherche "secteur", "domaine", "activité"
+- "localisation" : Ville, commune, quartier, rue, pays. CHERCHE TOUTE adresse mentionnée
+- "zone" : Zone géographique couverte
+- "dateDemarrage" : Date de début/lancement
+- "duree" : Durée du projet
+- "description" : Description COMPLÈTE du projet (pas de résumé court, mets TOUT)
+- "objectifs" : TOUS les objectifs listés dans le document
 
-💰 SECTION INVESTISSEMENT :
-- "investissementMateriel" : Équipements, machines, véhicules, mobilier, outils. Cherche "investissement", "équipement", "matériel", "immobilisation", "actif"
-- "investissementImateriel" : Formation, études, frais juridiques, licences, R&D. Cherche "immatériel", "frais", "étude", "formation"
-- "fondsDeRoulement" : Trésorerie de départ, stock initial. Cherche "fonds de roulement", "BFR", "trésorerie", "stock", "besoin en fonds"
+--- CONTACTS ET COORDONNÉES ---
+- "contacts" : CHERCHE ACTIVEMENT tous les contacts dans le document :
+  * Téléphones (fixe, mobile, whatsapp)
+  * Adresses email
+  * Adresses physiques (quartier, rue, ville)
+  * Sites web, réseaux sociaux
+  * Cherche dans : en-têtes, pieds de page, signatures, coordonnées, "contact", "tél", "tel", "email", "@", "www", "+223", "+226", etc.
 
-💵 SECTION FINANCEMENT :
-- "fondsPropres" : Apport personnel de l'entrepreneur. Cherche "apport", "fonds propres", "capital personnel", "épargne"
-- "emprunt" : Montant du prêt bancaire. Cherche "emprunt", "crédit", "prêt", "financement bancaire"
+--- DÉTAILS MATÉRIELS (INVESTISSEMENT) ---
+- "detailsMateriel" : LISTE DÉTAILLÉE de CHAQUE équipement/matériel avec :
+  * "designation" : Nom de l'équipement
+  * "quantite" : Quantité
+  * "prixUnitaire" : Prix unitaire
+  * "montant" : Total
+  Cherche : "matériel", "équipement", "machine", "véhicule", "mobilier", "outil", "table", "chaise", "ordinateur", "réfrigérateur", "four", "tracteur", "moto", "camion", etc.
+- "investissementMateriel" : TOTAL de l'investissement matériel (somme des détails)
 
-📈 SECTION EXPLOITATION :
-- "chargesVariables" : Pourcentage des charges variables. Cherche "charges variables", "CV", "matières premières", "coût variable"
-- "chargesFixes" : Montant annuel des charges fixes. Cherche "charges fixes", "CF", "loyer", "salaires fixes"
-- "chargesFinancieres" : Intérêts d'emprunt. Cherche "charges financières", "intérêts", "annuités"
-- "tauxIS" : Taux d'impôt. Cherche "IS", "impôt", "taxe", "30%", "25%"
-- "dureeAmortissement" : Durée en années. Cherche "amortissement", "durée de vie"
-- "caAnnees" : Chiffre d'affaires par année. Cherche "CA", "chiffre d'affaires", "recettes", "ventes prévues"
+- "detailsImateriel" : LISTE DÉTAILLÉE de chaque dépense immatérielle avec :
+  * "designation" : Nom de la dépense
+  * "montant" : Coût
+  Cherche : "formation", "étude", "licence", "frais", "honoraires", "site web", "marketing", "publicité", "registre", "juridique"
+- "investissementImateriel" : TOTAL
 
-👥 SECTION ÉQUIPE :
-- "responsables" : Noms des dirigeants, fondateurs, gérants. Cherche "promoteur", "fondateur", "gérant", "directeur", "responsable", "chef d'entreprise", "entrepreneur"
-- "risques" : Risques identifiés. Cherche "risque", "menace", "difficulté"
+- "detailsFondsRoulement" : LISTE DÉTAILLÉE des besoins en fonds de roulement avec :
+  * "designation" : Nature du besoin
+  * "montant" : Montant
+  Cherche : "stock", "trésorerie", "caisse", "fonds de roulement", "BFR", "approvisionnement"
+- "fondsDeRoulement" : TOTAL
+
+--- FINANCEMENT ---
+- "detailsFinancement" : LISTE DÉTAILLÉE des sources de financement :
+  * "source" : Nom de la source (fonds propres, banque, partenaire, etc.)
+  * "montant" : Montant
+  Cherche : "financement", "apport", "emprunt", "crédit", "subvention", "don", "prêt"
+- "fondsPropres" : TOTAL des fonds propres
+- "emprunt" : TOTAL des emprunts
+
+--- EXPLOITATION ---
+- "chargesVariables" : Pourcentage des charges variables (nombre uniquement)
+- "detailsChargesVariables" : LISTE des charges variables avec désignation et montant/%
+- "chargesFixes" : Montant annuel des charges fixes
+- "detailsChargesFixes" : LISTE des charges fixes avec désignation et montant
+- "chargesFinancieres" : Montant des charges financières
+- "tauxIS" : Taux d'impôt sur les sociétés
+- "dureeAmortissement" : Durée d'amortissement en années
+- "caAnnees" : Tableau des CA prévisionnels par année [annee1, annee2, ...]
+- "detailsCA" : Détails du CA si disponible (par produit/service, par mois, etc.)
+
+--- ÉQUIPE ---
+- "responsables" : Noms COMPLETS de TOUS les responsables/fondateurs
+- "detailsEquipe" : LISTE DÉTAILLÉE de chaque membre avec :
+  * "nom" : Nom complet
+  * "poste" : Fonction/Poste
+  * "contact" : Téléphone/email si disponible
+  * "role" : Rôle dans le projet
+  Cherche : "promoteur", "fondateur", "gérant", "directeur", "responsable", "manager", "chef", "employé", "salarié", "personnel"
+
+--- RISQUES ---
+- "risques" : Texte détaillé des risques identifiés
+- "detailsRisques" : LISTE des risques avec :
+  * "risque" : Description du risque
+  * "niveau" : Évaluation (faible, moyen, élevé)
+  * "mitigation" : Solution proposée si mentionnée
+
+--- AUTRES INFORMATIONS ---
+- "autresInformations" : TOUTE autre information pertinente trouvée dans le document qui ne rentre pas dans les catégories ci-dessus (partenariats, certifications, agréments, références, historique, etc.)
+- "concurrents" : Informations sur la concurrence si mentionnée
+- "clientsCibles" : Description des clients cibles
+- "fournisseurs" : Informations sur les fournisseurs
+- "partenaires" : Partenaires mentionnés
+
+📋 PROPOSITION DE TÂCHES :
+En fonction de ta compréhension du document et du plan d'affaires, propose des tâches concrètes pour réaliser le projet. Base-toi sur les activités, les phases, les étapes mentionnées dans le document.
+
+Pour chaque tâche, fournis :
+- "designation" : Titre court et clair de la tâche
+- "description" : Description détaillée de ce qu'il faut faire
+- "objectifs" : Objectif spécifique de cette tâche
+- "responsable" : Personne responsable (si mentionnée, sinon "À assigner")
+- "dateDebut" : Date de début estimée (si mentionnée, sinon "")
+- "dateFin" : Date de fin estimée (si mentionnée, sinon "")
+- "budgetPrev" : Budget prévisionnel estimé pour cette tâche (nombre ou 0)
+- "risques" : Risques éventuels liés à cette tâche
+- "statut" : "todo" (toujours "todo" pour les nouvelles tâches)
 
 RÈGLES ABSOLUES :
-- Réponds UNIQUEMENT en JSON valide (rien d'autre, pas de markdown)
-- Si un champ n'est vraiment nulle part, mets null
-- Les montants en NOMBRES uniquement (pas d'espaces ni symboles) : 5000000 pas "5 000 000 FCFA"
+- Réponds UNIQUEMENT en JSON valide (rien d'autre, pas de markdown, pas de backticks)
+- Si un champ n'est VRAIMENT nulle part après 5 lectures, mets null
+- Les montants en NOMBRES uniquement : 5000000 pas "5 000 000 FCFA"
 - Les pourcentages en NOMBRES : 25 pas "25%"
-- Pour "caAnnees", mets un tableau : [1500000, 2000000, 2500000]
-- CONFANCE : évalue honnêtement le % d'infos trouvées (0-100)
-- NE LAISSE AUCUN CHAMP À null SI L'INFO EST DANS LE DOCUMENT
-- Cherche les informations IMPLICITES aussi (ex: si "5 tables à 50 000F" = investissement matériel 250000)
-- CALCULE les totaux si les montants sont détaillés ligne par ligne
+- CALCULE les totaux si les montants sont détaillés
+- CHERCHE les informations IMPLICITES (ex: "5 tables à 50 000F" = investissement matériel 250000)
+- NE SOIS JAMAIS PARESSEUX : extrais TOUT, même les infos en bas de page, en notes de bas de page, en annexes
+- Pour les tableaux, extrais CHAQUE ligne individuellement
 
 FORMAT JSON STRICT :
 {
-  "resume": "Résumé du document en 3-4 phrases détaillées",
+  "resume": "Résumé détaillé du document en 4-5 phrases",
   "sections": {
     "nom": "string ou null",
     "secteur": "string ou null",
@@ -71,27 +136,55 @@ FORMAT JSON STRICT :
     "zone": "string ou null",
     "dateDemarrage": "string ou null",
     "duree": "string ou null",
-    "description": "string ou null",
-    "objectifs": "string ou null",
+    "description": "string détaillé ou null",
+    "objectifs": "string détaillé ou null",
+    "contacts": [{"type": "telephone|email|adresse|web", "valeur": "string", "qui": "à qui ça appartient"}] ou null,
+    "detailsMateriel": [{"designation": "string", "quantite": nombre, "prixUnitaire": nombre, "montant": nombre}] ou null,
     "investissementMateriel": nombre ou null,
+    "detailsImateriel": [{"designation": "string", "montant": nombre}] ou null,
     "investissementImateriel": nombre ou null,
+    "detailsFondsRoulement": [{"designation": "string", "montant": nombre}] ou null,
     "fondsDeRoulement": nombre ou null,
+    "detailsFinancement": [{"source": "string", "montant": nombre}] ou null,
     "fondsPropres": nombre ou null,
     "emprunt": nombre ou null,
     "chargesVariables": nombre ou null,
+    "detailsChargesVariables": [{"designation": "string", "montant": nombre}] ou null,
     "chargesFixes": nombre ou null,
+    "detailsChargesFixes": [{"designation": "string", "montant": nombre}] ou null,
     "chargesFinancieres": nombre ou null,
     "tauxIS": nombre ou null,
     "dureeAmortissement": nombre ou null,
     "caAnnees": [nombre] ou null,
+    "detailsCA": [{"designation": "string", "montant": nombre}] ou null,
     "responsables": ["string"] ou null,
-    "risques": "string ou null"
+    "detailsEquipe": [{"nom": "string", "poste": "string", "contact": "string", "role": "string"}] ou null,
+    "risques": "string ou null",
+    "detailsRisques": [{"risque": "string", "niveau": "string", "mitigation": "string"}] ou null,
+    "autresInformations": "string ou null",
+    "concurrents": "string ou null",
+    "clientsCibles": "string ou null",
+    "fournisseurs": "string ou null",
+    "partenaires": "string ou null"
   },
+  "tachesProposees": [
+    {
+      "designation": "string",
+      "description": "string",
+      "objectifs": "string",
+      "responsable": "string",
+      "dateDebut": "string",
+      "dateFin": "string",
+      "budgetPrev": nombre,
+      "risques": "string",
+      "statut": "todo"
+    }
+  ],
   "champsManquants": ["liste des champs non trouvés"],
   "confiance": 85
 }
 
-Prends tout le temps nécessaire. Analyse ce document de façon EXHAUSTIVE :`;
+Prends tout le temps nécessaire. Analyse ce document de façon ULTRA-EXHAUSTIVE. Relis-le autant de fois que nécessaire :`;
 
 export async function POST(request: NextRequest) {
     try {
@@ -138,9 +231,7 @@ export async function POST(request: NextRequest) {
                     const errBody = await response.text();
                     lastError = errBody;
                     console.error(`Gemini ${model} error:`, errBody);
-                    // Si erreur 429 (quota), on continue avec le modèle suivant
                     if (response.status === 429) continue;
-                    // Si erreur 404 (modèle introuvable), on continue
                     if (response.status === 404) continue;
                 }
             } catch (err) {
@@ -150,7 +241,6 @@ export async function POST(request: NextRequest) {
         }
 
         if (!data) {
-            // Détecter si c'est un problème de quota
             const isQuotaError = lastError.includes("429") || lastError.includes("quota") || lastError.includes("RESOURCE_EXHAUSTED");
             const errorMsg = isQuotaError
                 ? "⚠️ Quota Gemini dépassé. Attendez quelques minutes ou créez une nouvelle clé API sur ai.google.dev"
@@ -163,7 +253,6 @@ export async function POST(request: NextRequest) {
 
         const rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-        // Extract JSON from response
         let parsed: any = null;
         try {
             const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
