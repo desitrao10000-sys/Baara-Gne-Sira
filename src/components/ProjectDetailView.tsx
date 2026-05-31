@@ -4,7 +4,7 @@ import {
     ArrowLeft, FolderKanban, Building2, MapPin, Globe2,
     Calendar, Clock, FileText, Target, Sparkles, Trash2, AlertTriangle,
     Calculator, Landmark, Percent, TrendingUp, CreditCard, PiggyBank,
-    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt, ChevronDown, ChevronUp, Edit3,
+    CircleDollarSign, FileSpreadsheet, BarChart3, Receipt, ChevronDown, ChevronUp, Edit3, Plus,
 } from "lucide-react";
 import { ProjectInfo } from "./ProjectCreationWizard";
 import { BusinessPlanData } from "./BusinessPlanWizard";
@@ -53,6 +53,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
     // BP editing
     const [editingBpField, setEditingBpField] = useState<string | null>(null);
     const [editBpValue, setEditBpValue] = useState("");
+    const [editBpLineItems, setEditBpLineItems] = useState<Array<{ desig: string; montant: string }>>([]);
     const [editingCaIndex, setEditingCaIndex] = useState<number | null>(null);
     const [editCaValue, setEditCaValue] = useState("");
 
@@ -65,10 +66,35 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
         }
         setEditingCaIndex(null); setEditCaValue("");
     };
-    const startBpEdit = (k: string, v: string) => { setEditingBpField(k); setEditBpValue(v || ""); };
+    const monetaryBpFieldIds = new Set(["investissementMateriel", "investissementImateriel", "fondsDeRoulement", "fondsPropres", "emprunt", "chargesFixes", "chargesFinancieres"]);
+    const isMonBp = (id: string) => monetaryBpFieldIds.has(id);
+    const getLI = (): Record<string, Array<{ desig: string; montant: string }>> => {
+        if (!bpData?.lineItemsJson) return {};
+        try { return JSON.parse(bpData.lineItemsJson); } catch { return {}; }
+    };
+    const startBpEdit = (k: string, v: string) => {
+        setEditingBpField(k); setEditBpValue(v || "");
+        if (isMonBp(k)) {
+            const stored = getLI()[k];
+            if (stored && stored.length > 0 && stored.some(it => it.desig || it.montant)) {
+                setEditBpLineItems(stored.map(it => ({ ...it })));
+            } else {
+                setEditBpLineItems([{ desig: "", montant: v || "" }]);
+            }
+        } else { setEditBpLineItems([]); }
+    };
     const confirmBpEdit = () => {
-        if (editingBpField && bpData) { const u = { ...bpData, [editingBpField]: editBpValue }; setBpData(u); onSaveBusinessPlan(u); }
-        setEditingBpField(null); setEditBpValue("");
+        if (editingBpField && bpData) {
+            if (isMonBp(editingBpField) && editBpLineItems.length > 0) {
+                const sum = editBpLineItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
+                const nLI = { ...getLI(), [editingBpField]: editBpLineItems };
+                const u = { ...bpData, [editingBpField]: sum > 0 ? sum.toString() : "", lineItemsJson: JSON.stringify(nLI) };
+                setBpData(u); onSaveBusinessPlan(u);
+            } else {
+                const u = { ...bpData, [editingBpField]: editBpValue }; setBpData(u); onSaveBusinessPlan(u);
+            }
+        }
+        setEditingBpField(null); setEditBpValue(""); setEditBpLineItems([]);
     };
 
     const { info } = project;
@@ -289,29 +315,75 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                 { label: "Prime pays", icon: <CreditCard size={14} />, key: "primePays", val: bp.primePays, mont: nPP, suf: "%" },
                                             ].map((f) => {
                                                 const isEditing = editingBpField === f.key;
+                                                const isMon = isMonBp(f.key);
+                                                const storedItems = getLI()[f.key];
+                                                const hasDetail = isMon && storedItems && storedItems.some(it => it.desig || parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) > 0);
                                                 return (
                                                     <div key={f.key} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
                                                         {isEditing ? (
-                                                            <div className="space-y-1.5">
-                                                                <p className="text-[11px] font-black text-blue-600 uppercase tracking-wider">{f.label}</p>
-                                                                <input type="text" value={editBpValue} onChange={(e) => setEditBpValue(e.target.value)} inputMode="text" className="w-full p-2 rounded-lg border-2 border-blue-400 bg-white text-sm font-semibold text-slate-900 outline-none" autoFocus />
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={confirmBpEdit} className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">✓ Valider</button>
-                                                                    <button onClick={() => { setEditingBpField(null); setEditBpValue(""); }} className="flex-1 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">✕ Annuler</button>
+                                                            isMon ? (
+                                                                <div className="space-y-2">
+                                                                    <p className="text-[11px] font-black text-blue-600 uppercase tracking-wider">{f.label}</p>
+                                                                    {editBpLineItems.map((item, idx) => (
+                                                                        <div key={idx} className="flex gap-1.5">
+                                                                            <input type="text" value={item.desig} onChange={(e) => { const n = editBpLineItems.map((it, i) => i === idx ? { ...it, desig: e.target.value } : it); setEditBpLineItems(n); }} placeholder="Désignation" className="flex-1 p-2 rounded-lg border-2 border-blue-300 bg-white text-xs font-bold text-slate-800 outline-none focus:border-blue-500" />
+                                                                            <input type="text" inputMode="decimal" value={item.montant} onChange={(e) => { const n = editBpLineItems.map((it, i) => i === idx ? { ...it, montant: e.target.value } : it); setEditBpLineItems(n); }} placeholder="Montant" className="w-24 p-2 rounded-lg border-2 border-blue-300 bg-white text-xs font-bold text-slate-800 outline-none focus:border-blue-500 text-center" />
+                                                                            {editBpLineItems.length > 1 && (
+                                                                                <button onClick={() => { const n = editBpLineItems.filter((_, i) => i !== idx); if (n.length === 0) n.push({ desig: "", montant: "" }); setEditBpLineItems(n); }} className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100" title="Supprimer"><Trash2 size={12} /></button>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                    <button onClick={() => setEditBpLineItems([...editBpLineItems, { desig: "", montant: "" }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 text-[10px] font-bold text-blue-600 flex items-center justify-center gap-1"><Plus size={12} /> Ajouter</button>
+                                                                    {editBpLineItems.some(it => parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) > 0) && (
+                                                                        <div className="flex items-center justify-between bg-green-50 rounded-lg p-2 border border-green-200">
+                                                                            <span className="text-[10px] font-black text-green-700 uppercase">Total</span>
+                                                                            <span className="text-sm font-black text-green-700">{fmt(editBpLineItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0))} FCFA</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex gap-2">
+                                                                        <button onClick={confirmBpEdit} className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">✓ Valider</button>
+                                                                        <button onClick={() => { setEditingBpField(null); setEditBpValue(""); setEditBpLineItems([]); }} className="flex-1 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">✕ Annuler</button>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            ) : (
+                                                                <div className="space-y-1.5">
+                                                                    <p className="text-[11px] font-black text-blue-600 uppercase tracking-wider">{f.label}</p>
+                                                                    <input type="text" value={editBpValue} onChange={(e) => setEditBpValue(e.target.value)} inputMode="text" placeholder="Valeur" className="w-full p-2 rounded-lg border-2 border-blue-400 bg-white text-sm font-semibold text-slate-900 outline-none" autoFocus />
+                                                                    <div className="flex gap-2">
+                                                                        <button onClick={confirmBpEdit} className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">✓ Valider</button>
+                                                                        <button onClick={() => { setEditingBpField(null); setEditBpValue(""); }} className="flex-1 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">✕ Annuler</button>
+                                                                    </div>
+                                                                </div>
+                                                            )
                                                         ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-blue-600">{f.icon}</div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">{f.label}</p>
-                                                                    <p className="text-xs text-slate-500 font-semibold truncate">{f.val || "—"}</p>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-blue-600">{f.icon}</div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">{f.label}</p>
+                                                                    </div>
+                                                                    <div className="text-right shrink-0">
+                                                                        <p className="text-sm font-black text-slate-900">{f.suf ? `${f.mont}${f.suf}` : f.mont > 0 ? fmt(f.mont) : "—"}</p>
+                                                                        {!f.suf && f.mont > 0 && <p className="text-[10px] text-slate-400">FCFA</p>}
+                                                                    </div>
+                                                                    <button onClick={() => startBpEdit(f.key, f.val)} className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 ml-1 shrink-0" aria-label={`Modifier ${f.label}`}><Edit3 size={12} className="text-blue-500" /></button>
                                                                 </div>
-                                                                <div className="text-right shrink-0">
-                                                                    <p className="text-sm font-black text-slate-900">{f.suf ? `${f.mont}${f.suf}` : f.mont > 0 ? fmt(f.mont) : "—"}</p>
-                                                                    {!f.suf && f.mont > 0 && <p className="text-[10px] text-slate-400">FCFA</p>}
-                                                                </div>
-                                                                <button onClick={() => startBpEdit(f.key, f.val)} className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 ml-1 shrink-0" aria-label={`Modifier ${f.label}`}><Edit3 size={12} className="text-blue-500" /></button>
+                                                                {hasDetail && storedItems && (
+                                                                    <div className="mt-1.5 ml-9 space-y-0.5 border-t border-slate-200 pt-1.5">
+                                                                        {storedItems.map((item, idx) => (
+                                                                            (item.desig || item.montant) ? (
+                                                                                <div key={idx} className="flex justify-between text-[11px]">
+                                                                                    <span className="text-slate-500 font-semibold truncate mr-2">{item.desig || "—"}</span>
+                                                                                    <span className="font-bold text-slate-700 whitespace-nowrap">{(() => { const n = parseFloat(item.montant.replace(/[^\d.,]/g, "").replace(",", ".")); return n > 0 ? `${fmt(n)} FCFA` : item.montant || "—"; })()}</span>
+                                                                                </div>
+                                                                            ) : null
+                                                                        ))}
+                                                                        <div className="flex justify-between border-t border-slate-200 pt-1 mt-1">
+                                                                            <span className="text-[10px] font-black text-green-700 uppercase">Total</span>
+                                                                            <span className="text-xs font-black text-green-700">{f.suf ? `${f.mont}${f.suf}` : f.mont > 0 ? `${fmt(f.mont)} FCFA` : "—"}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

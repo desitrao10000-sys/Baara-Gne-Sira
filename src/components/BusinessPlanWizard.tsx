@@ -24,6 +24,7 @@ export interface BusinessPlanData {
     chargesVariables: string;
     chargesFixes: string;
     chargesFinancieres: string;
+    lineItemsJson?: string;
     designations?: Record<string, string>;
     computed?: {
         investissementMateriel: number;
@@ -1484,6 +1485,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                         onComplete({
                             ...data,
                             caAnnees: JSON.stringify(caAnnees),
+                            lineItemsJson: JSON.stringify(lineItems),
                             computed: {
                                 investissementMateriel: num(data.investissementMateriel),
                                 investissementImateriel: num(data.investissementImateriel),
