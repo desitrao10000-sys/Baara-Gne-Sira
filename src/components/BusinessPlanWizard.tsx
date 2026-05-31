@@ -24,6 +24,7 @@ export interface BusinessPlanData {
     chargesVariables: string;
     chargesFixes: string;
     chargesFinancieres: string;
+    designations?: Record<string, string>;
     computed?: {
         investissementMateriel: number;
         investissementImateriel: number;
@@ -1558,7 +1559,29 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 )}
                             </div>
 
-                            <textarea rows={2} value={getVal(currentStep.id)} onChange={(e) => setVal(currentStep.id, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) { e.preventDefault(); handleNext(); } }} placeholder={stepHints[currentStep.id]?.inputHint || "📝 Écris le nom puis le montant"} className="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center resize-none" autoFocus />
+                            {(() => {
+                                const isTauxField = ["tauxInteret", "tauxSansRisque", "primeSectorielle", "primePays", "tauxIS"].includes(currentStep.id);
+                                const isAnneesField = currentStep.id === "dureeAmortissement";
+                                const isPourcentageField = currentStep.id === "chargesVariables";
+                                const unit = isTauxField || isPourcentageField ? "%" : isAnneesField ? "ans" : "FCFA";
+                                const val = getVal(currentStep.id);
+                                const parsed = val.includes("—") ? val.split("—").map(s => s.trim()) : val.includes("-") ? val.split("-").map(s => s.trim()) : ["", val];
+                                const desig = parsed[0] || "";
+                                const montant = parsed[1] || "";
+                                const updateField = (d: string, m: string) => {
+                                    const sep = m ? ` — ${m}` : "";
+                                    setVal(currentStep.id, d ? `${d}${sep}` : m);
+                                };
+                                return (
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <input type="text" value={desig} onChange={(e) => updateField(e.target.value, montant)} placeholder="Désignation" className="flex-1 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all" autoFocus />
+                                            <input type="text" inputMode="decimal" value={montant} onChange={(e) => updateField(desig, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) { e.preventDefault(); handleNext(); } }} placeholder={isTauxField || isPourcentageField ? "Taux" : isAnneesField ? "Durée" : "Montant"} className="w-32 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all text-center" />
+                                        </div>
+                                        <p className="text-center text-[10px] font-bold text-slate-400 uppercase">{unit}</p>
+                                    </div>
+                                );
+                            })()}
                         </>
                     )}
                 </div>
