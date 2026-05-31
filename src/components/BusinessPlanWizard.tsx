@@ -1285,7 +1285,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
         if (editingField) {
             if (isMonetaryField(editingField)) {
                 const sum = editLineItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
-                setVal(editingField, sum > 0 ? sum.toString() : "");
+                setVal(editingField, editLineItems.some(it => it.montant.trim() !== "") ? sum.toString() : "");
                 setLineItems(prev => ({ ...prev, [editingField!]: editLineItems.map(it => ({ ...it })) }));
             } else {
                 if (editValue.trim()) setVal(editingField, editValue);
@@ -1655,7 +1655,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 const syncToData = (newItems: Array<{ desig: string; montant: string }>) => {
                                     if (isMonetaryField) {
                                         const sum = newItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
-                                        setVal(currentStep.id, sum > 0 ? sum.toString() : "");
+                                        setVal(currentStep.id, newItems.some(it => it.montant.trim() !== "") ? sum.toString() : "");
                                     } else {
                                         setVal(currentStep.id, newItems[0]?.montant || "");
                                     }
