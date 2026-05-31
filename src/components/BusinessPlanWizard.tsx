@@ -5,7 +5,7 @@ import {
     ArrowLeft, ArrowRight, Check, Calculator, Landmark, Percent,
     Receipt, TrendingUp, CreditCard, PiggyBank, CircleDollarSign,
     FileSpreadsheet, BarChart3, Info, Pencil, X, Save, FolderKanban,
-    MessageCircle, Send, Lightbulb,
+    MessageCircle, Send, Lightbulb, Plus, Trash2,
 } from "lucide-react";
 
 export interface BusinessPlanData {
@@ -1141,6 +1141,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
     const [helpLoading, setHelpLoading] = useState(false);
     const helpResponseRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [lineItems, setLineItems] = useState<Record<string, Array<{ desig: string; montant: string }>>>({});
 
     // Auto-scroll vers la réponse quand elle apparaît
     useEffect(() => {
@@ -1514,7 +1515,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                     <p className="text-xs font-bold text-slate-600 mb-2">💡 Choisis ou tape ta valeur :</p>
                                     <div className="flex flex-wrap gap-2">
                                         {currentStep.suggestions.map((sug) => (
-                                            <button key={sug.value} onClick={() => setVal(currentStep.id, sug.value)} className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${getVal(currentStep.id) === sug.value ? "border-vibrant-blue bg-blue-50 text-vibrant-blue shadow-md shadow-blue-500/20" : "border-slate-200 bg-white text-slate-700"}`}>{sug.label}</button>
+                                            <button key={sug.value} onClick={() => { setVal(currentStep.id, sug.value); setLineItems(prev => ({ ...prev, [currentStep.id]: [{ desig: "", montant: sug.value }] })); }} className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${getVal(currentStep.id) === sug.value ? "border-vibrant-blue bg-blue-50 text-vibrant-blue shadow-md shadow-blue-500/20" : "border-slate-200 bg-white text-slate-700"}`}>{sug.label}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -1564,20 +1565,89 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 const isAnneesField = currentStep.id === "dureeAmortissement";
                                 const isPourcentageField = currentStep.id === "chargesVariables";
                                 const unit = isTauxField || isPourcentageField ? "%" : isAnneesField ? "ans" : "FCFA";
-                                const val = getVal(currentStep.id);
-                                const parsed = val.includes("—") ? val.split("—").map(s => s.trim()) : val.includes("-") ? val.split("-").map(s => s.trim()) : ["", val];
-                                const desig = parsed[0] || "";
-                                const montant = parsed[1] || "";
-                                const updateField = (d: string, m: string) => {
-                                    const sep = m ? ` — ${m}` : "";
-                                    setVal(currentStep.id, d ? `${d}${sep}` : m);
+                                const isMonetaryField = !isTauxField && !isAnneesField && !isPourcentageField;
+                                const placeholder = isTauxField || isPourcentageField ? "Taux" : isAnneesField ? "Durée" : "Montant";
+
+                                // Get or initialize items for this field
+                                const stored = lineItems[currentStep.id];
+                                const items: Array<{ desig: string; montant: string }> = (stored && stored.length > 0)
+                                    ? stored
+                                    : (() => {
+                                        const v = getVal(currentStep.id);
+                                        if (!v) return [{ desig: "", montant: "" }];
+                                        if (v.includes(" — ")) {
+                                            const p = v.split(" — ");
+                                            return [{ desig: p[0].trim(), montant: p.slice(1).join(" — ").trim() }];
+                                        }
+                                        return [{ desig: "", montant: v }];
+                                    })();
+
+                                const syncToData = (newItems: Array<{ desig: string; montant: string }>) => {
+                                    if (isMonetaryField) {
+                                        const sum = newItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
+                                        setVal(currentStep.id, sum > 0 ? sum.toString() : "");
+                                    } else {
+                                        setVal(currentStep.id, newItems[0]?.montant || "");
+                                    }
                                 };
+
+                                const updateItem = (idx: number, key: "desig" | "montant", value: string) => {
+                                    const newItems = items.map((it, i) => i === idx ? { ...it, [key]: value } : it);
+                                    setLineItems(prev => ({ ...prev, [currentStep.id]: newItems }));
+                                    syncToData(newItems);
+                                };
+
+                                const addItem = () => {
+                                    const newItems = [...items, { desig: "", montant: "" }];
+                                    setLineItems(prev => ({ ...prev, [currentStep.id]: newItems }));
+                                };
+
+                                const removeItem = (idx: number) => {
+                                    const newItems = items.filter((_: { desig: string; montant: string }, i: number) => i !== idx);
+                                    if (newItems.length === 0) newItems.push({ desig: "", montant: "" });
+                                    setLineItems(prev => ({ ...prev, [currentStep.id]: newItems }));
+                                    syncToData(newItems);
+                                };
+
                                 return (
-                                    <div className="space-y-2">
-                                        <div className="flex gap-2">
-                                            <input type="text" value={desig} onChange={(e) => updateField(e.target.value, montant)} placeholder="Désignation" className="flex-1 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all" autoFocus />
-                                            <input type="text" inputMode="decimal" value={montant} onChange={(e) => updateField(desig, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && canGoNext()) { e.preventDefault(); handleNext(); } }} placeholder={isTauxField || isPourcentageField ? "Taux" : isAnneesField ? "Durée" : "Montant"} className="w-32 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all text-center" />
-                                        </div>
+                                    <div className="space-y-3">
+                                        {items.map((item, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={item.desig}
+                                                    onChange={(e) => updateItem(idx, "desig", e.target.value)}
+                                                    placeholder="Désignation"
+                                                    className="flex-1 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all"
+                                                    autoFocus={idx === 0}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={item.montant}
+                                                    onChange={(e) => updateItem(idx, "montant", e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            if (isMonetaryField && idx === items.length - 1) addItem();
+                                                            else if (canGoNext()) handleNext();
+                                                        }
+                                                    }}
+                                                    placeholder={placeholder}
+                                                    className="w-32 p-3 rounded-2xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-vibrant-blue transition-all text-center"
+                                                />
+                                                {items.length > 1 && (
+                                                    <button onClick={() => removeItem(idx)} className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-100 active:scale-95 transition-all" title="Supprimer">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {isMonetaryField && (
+                                            <button onClick={addItem} className="w-full py-2.5 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 text-xs font-bold text-vibrant-blue flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-blue-100/50">
+                                                <Plus size={14} /> Ajouter un élément
+                                            </button>
+                                        )}
                                         <p className="text-center text-[10px] font-bold text-slate-400 uppercase">{unit}</p>
                                     </div>
                                 );
