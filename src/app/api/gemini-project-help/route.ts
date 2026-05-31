@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-];
+const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
 const GEMINI_URL = (model: string) =>
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -56,7 +53,7 @@ export async function POST(request: NextRequest) {
                         ],
                         generationConfig: {
                             temperature: 0.7,
-                            maxOutputTokens: 500,
+                            maxOutputTokens: 4096,
                             topP: 0.9,
                         }
                     }),
