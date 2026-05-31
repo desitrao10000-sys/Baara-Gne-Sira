@@ -1134,6 +1134,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
     const [mode, setMode] = useState<"wizard" | "review">("wizard");
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
+    const [editLineItems, setEditLineItems] = useState<Array<{ desig: string; montant: string }>>([]);
     // Assistant
     const [showHelp, setShowHelp] = useState(false);
     const [helpQuery, setHelpQuery] = useState("");
@@ -1265,8 +1266,32 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
         if (n > 0) return `${fmt(n)} FCFA`;
         return v || "—";
     };
-    const startEdit = (fieldId: string) => { setEditingField(fieldId); setEditValue(getVal(fieldId)); };
-    const confirmEdit = () => { if (editValue.trim() && editingField) setVal(editingField, editValue); setEditingField(null); setEditValue(""); };
+    const monetaryFieldIds = ["investissementMateriel", "investissementImateriel", "fondsDeRoulement", "fondsPropres", "emprunt", "chargesFixes", "chargesFinancieres"];
+    const isMonetaryField = (id: string) => monetaryFieldIds.includes(id);
+
+    const startEdit = (fieldId: string) => {
+        setEditingField(fieldId);
+        const v = getVal(fieldId);
+        setEditValue(v);
+        const stored = lineItems[fieldId];
+        if (stored && stored.length > 0 && stored.some(it => it.desig || it.montant)) {
+            setEditLineItems(stored.map(it => ({ ...it })));
+        } else {
+            setEditLineItems([{ desig: "", montant: v || "" }]);
+        }
+    };
+    const confirmEdit = () => {
+        if (editingField) {
+            if (isMonetaryField(editingField)) {
+                const sum = editLineItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
+                setVal(editingField, sum > 0 ? sum.toString() : "");
+                setLineItems(prev => ({ ...prev, [editingField!]: editLineItems.map(it => ({ ...it })) }));
+            } else {
+                if (editValue.trim()) setVal(editingField, editValue);
+            }
+        }
+        setEditingField(null); setEditValue(""); setEditLineItems([]);
+    };
 
     // ═══════════════════════════════════════════════════════
     //  MODE REVIEW
@@ -1344,6 +1369,9 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                     <div className="space-y-2">
                         {reviewFields.map((field) => {
                             const isEditing = editingField === field.id;
+                            const isMon = isMonetaryField(field.id);
+                            const fieldItems = lineItems[field.id] || [];
+                            const hasDetail = isMon && fieldItems.some(it => it.desig.trim() || parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) > 0);
                             return (
                                 <div key={field.id} className="bg-white rounded-2xl p-3 shadow-sm border border-black/5">
                                     <div className="flex items-center justify-between mb-1">
@@ -1354,11 +1382,51 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                         {!isEditing && <button onClick={() => startEdit(field.id)} className="p-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 group" aria-label="Modifier"><Pencil size={13} className="text-slate-400 group-hover:text-vibrant-blue" /></button>}
                                     </div>
                                     {isEditing ? (
-                                        <div className="space-y-2 mt-1">
-                                            <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="Nom — Montant" className="w-full p-2.5 rounded-xl border-2 border-vibrant-blue bg-blue-50/50 text-sm font-bold text-slate-800 outline-none" autoFocus />
-                                            <div className="flex gap-2">
-                                                <button onClick={confirmEdit} disabled={!editValue.trim()} className={`flex-1 py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 ${editValue.trim() ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"}`}><Check size={13} /> OK</button>
-                                                <button onClick={() => setEditingField(null)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"><X size={13} /> Annuler</button>
+                                        isMon ? (
+                                            <div className="space-y-2 mt-1">
+                                                {editLineItems.map((item, idx) => (
+                                                    <div key={idx} className="flex gap-1.5">
+                                                        <input type="text" value={item.desig} onChange={(e) => { const n = editLineItems.map((it, i) => i === idx ? { ...it, desig: e.target.value } : it); setEditLineItems(n); }} placeholder="Désignation" className="flex-1 p-2 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 outline-none focus:border-vibrant-blue" />
+                                                        <input type="text" inputMode="decimal" value={item.montant} onChange={(e) => { const n = editLineItems.map((it, i) => i === idx ? { ...it, montant: e.target.value } : it); setEditLineItems(n); }} placeholder="Montant" className="w-24 p-2 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 outline-none focus:border-vibrant-blue text-center" />
+                                                        {editLineItems.length > 1 && (
+                                                            <button onClick={() => { const n = editLineItems.filter((_, i) => i !== idx); if (n.length === 0) n.push({ desig: "", montant: "" }); setEditLineItems(n); }} className="p-2 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 active:scale-95 transition-all" title="Supprimer"><Trash2 size={12} /></button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                <button onClick={() => setEditLineItems([...editLineItems, { desig: "", montant: "" }])} className="w-full py-1.5 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 text-[10px] font-bold text-vibrant-blue flex items-center justify-center gap-1 active:scale-95 transition-all"><Plus size={12} /> Ajouter</button>
+                                                {editLineItems.some(it => parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) > 0) && (
+                                                    <div className="flex items-center justify-between bg-green-50 rounded-xl p-2 border border-green-200">
+                                                        <span className="text-[10px] font-black text-green-700 uppercase">Total</span>
+                                                        <span className="text-sm font-black text-green-700">{fmt(editLineItems.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0))} FCFA</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2">
+                                                    <button onClick={confirmEdit} className="flex-1 py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 bg-green-500 text-white"><Check size={13} /> OK</button>
+                                                    <button onClick={() => { setEditingField(null); setEditLineItems([]); }} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"><X size={13} /> Annuler</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 mt-1">
+                                                <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="Valeur" className="w-full p-2.5 rounded-xl border-2 border-vibrant-blue bg-blue-50/50 text-sm font-bold text-slate-800 outline-none" autoFocus />
+                                                <div className="flex gap-2">
+                                                    <button onClick={confirmEdit} disabled={!editValue.trim()} className={`flex-1 py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 ${editValue.trim() ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"}`}><Check size={13} /> OK</button>
+                                                    <button onClick={() => setEditingField(null)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"><X size={13} /> Annuler</button>
+                                                </div>
+                                            </div>
+                                        )
+                                    ) : hasDetail ? (
+                                        <div className="pl-8 space-y-0.5">
+                                            {fieldItems.map((item, idx) => (
+                                                (item.desig || item.montant) ? (
+                                                    <div key={idx} className="flex justify-between text-[11px]">
+                                                        <span className="text-slate-500 font-semibold truncate mr-2">{item.desig || "—"}</span>
+                                                        <span className="font-bold text-slate-800 whitespace-nowrap">{item.montant ? (() => { const n = parseFloat(item.montant.replace(/[^\d.,]/g, "").replace(",", ".")); return n > 0 ? `${fmt(n)} FCFA` : item.montant; })() : "—"}</span>
+                                                    </div>
+                                                ) : null
+                                            ))}
+                                            <div className="flex justify-between border-t border-slate-100 pt-1 mt-1">
+                                                <span className="text-[10px] font-black text-green-700 uppercase">Total</span>
+                                                <span className="text-sm font-black text-vibrant-blue">{displayVal(field.id)}</span>
                                             </div>
                                         </div>
                                     ) : (
@@ -1648,6 +1716,15 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                                 <Plus size={14} /> Ajouter un élément
                                             </button>
                                         )}
+                                        {isMonetaryField && items.some(it => parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) > 0) && (() => {
+                                            const totalSum = items.reduce((a, it) => a + (parseFloat(it.montant.replace(/[^\d.,]/g, "").replace(",", ".")) || 0), 0);
+                                            return (
+                                                <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-3 border-2 border-green-200">
+                                                    <span className="text-xs font-black text-green-700 uppercase tracking-wider">💰 Total</span>
+                                                    <span className="text-base font-black text-green-700">{fmt(totalSum)} FCFA</span>
+                                                </div>
+                                            );
+                                        })()}
                                         <p className="text-center text-[10px] font-bold text-slate-400 uppercase">{unit}</p>
                                     </div>
                                 );
