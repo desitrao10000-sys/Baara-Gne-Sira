@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "@/components/Header";
 import Dock from "@/components/Dock";
 import ProjectGrid from "@/components/ProjectGrid";
@@ -8,15 +8,17 @@ import ProjectView from "@/components/ProjectView";
 import ProjectDetailView from "@/components/ProjectDetailView";
 import ProjectCreationWizard, { ProjectInfo } from "@/components/ProjectCreationWizard";
 import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanWizard";
+import DocumentUploadFlow from "@/components/DocumentUploadFlow";
 import { useSupabaseProjects, Project } from "@/lib/useSupabaseProjects";
-import { PlusCircle, ChevronRight, FolderKanban, Calendar, MapPin } from "lucide-react";
+import { PlusCircle, ChevronRight, FolderKanban, Calendar, MapPin, Upload, FileText, Image, Sparkles, AlertCircle, CheckCircle2, X, Loader2 } from "lucide-react";
 
 export default function Home() {
   const [currentView, setCurrentView] = useState("home");
   const [activeTab, setActiveTab] = useState("home");
-  const { projects, loading, saveProject, deleteProject, saveBusinessPlan, saveManager, saveTasks } = useSupabaseProjects();
+  const { projects, loading, saveProject, deleteProject, saveBusinessPlan, saveManager, saveTasks, saveDocuments } = useSupabaseProjects();
   const [showWizard, setShowWizard] = useState(false);
   const [showBusinessPlan, setShowBusinessPlan] = useState(false);
+  const [showDocUpload, setShowDocUpload] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleAppClick = (id: string) => {
@@ -60,6 +62,21 @@ export default function Home() {
     return <ProjectCreationWizard onComplete={handleWizardComplete} onCancel={() => setShowWizard(false)} />;
   }
 
+  // Show document upload flow fullscreen
+  if (showDocUpload) {
+    return (
+      <DocumentUploadFlow
+        onComplete={async (project) => {
+          await saveProject(project);
+          setShowDocUpload(false);
+          setSelectedProject(project);
+          setCurrentView("project-detail");
+        }}
+        onCancel={() => setShowDocUpload(false)}
+      />
+    );
+  }
+
   // Show business plan wizard fullscreen
   if (showBusinessPlan && selectedProject) {
     const existingBP = selectedProject.businessPlan ? (JSON.parse(selectedProject.businessPlan) as BusinessPlanData) : undefined;
@@ -84,7 +101,7 @@ export default function Home() {
         {currentView === "home" ? (
           <ProjectGrid onAppClick={handleAppClick} />
         ) : currentView === "project-list" ? (
-          <ProjectListView projects={projects} onCreateProject={() => setShowWizard(true)} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("project-detail"); }} />
+          <ProjectListView projects={projects} onCreateProject={() => setShowWizard(true)} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("project-detail"); }} onDocUpload={() => setShowDocUpload(true)} />
         ) : currentView === "project-detail" && selectedProject ? (
           <ProjectDetailView
             project={selectedProject}
@@ -138,7 +155,7 @@ export default function Home() {
 }
 
 // ─── Project List Component ────────────────────────────────────────
-function ProjectListView({ projects, onCreateProject, onSelectProject }: { projects: Project[]; onCreateProject: () => void; onSelectProject: (p: Project) => void; }) {
+function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUpload }: { projects: Project[]; onCreateProject: () => void; onSelectProject: (p: Project) => void; onDocUpload: () => void; }) {
   const sectorLabels: Record<string, string> = { commerce: "🛒 Commerce", agriculture: "🌾 Agriculture", service: "💼 Service", industrie: "🏭 Industrie", elevage: "🐄 Élevage", artisanat: "🪵 Artisanat", transport: "🚚 Transport", technologie: "💻 Technologie", sante: "🏥 Santé", education: "📚 Éducation", restauration: "🍽️ Restauration", batiment: "🏗️ Bâtiment" };
   const durationLabels: Record<string, string> = { "3-mois": "3 mois", "6-mois": "6 mois", "1-an": "1 an", "2-ans": "2 ans", "3-ans": "3 ans", "5-ans": "5 ans", "10-ans": "10 ans" };
 
@@ -150,6 +167,19 @@ function ProjectListView({ projects, onCreateProject, onSelectProject }: { proje
         <button onClick={onCreateProject} className="w-full py-4 bg-gradient-to-r from-[var(--bg-navy-textured)] to-blue-700 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-transform">
           <PlusCircle size={20} /> Créer un Nouveau Projet
         </button>
+
+        {/* Séparateur OU */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ou</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        {/* Remplissage par document */}
+        <button onClick={onDocUpload} className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-transform">
+          <Sparkles size={20} className="text-yellow-300" /> Remplissage Projet / Plan d'affaire par document
+        </button>
+        <p className="text-[11px] text-slate-400 font-semibold mt-2 text-center">PDF, Word ou photos — L'IA remplit automatiquement les sections</p>
       </div>
 
       {projects.length > 0 && (

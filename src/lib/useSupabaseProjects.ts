@@ -54,6 +54,16 @@ export interface ProjectTask {
     commentaires: string;
 }
 
+export interface ProjectDocument {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    uploadedAt: string;
+    base64?: string;
+    analysis?: { resume: string; sections: Record<string, any>; champsManquants: string[]; confiance: number } | null;
+}
+
 export interface Project {
     id: string;
     info: ProjectInfo;
@@ -61,6 +71,7 @@ export interface Project {
     businessPlan?: string | null;
     manager?: ProjectManager | null;
     tasks?: ProjectTask[];
+    documents?: ProjectDocument[];
 }
 
 function projectToRow(p: Project) {
@@ -75,7 +86,7 @@ function projectToRow(p: Project) {
         target: p.info.objectives,
         budget: "",
         team: "",
-        extra_info: { ...p.info, _manager: p.manager || null, _tasks: p.tasks || [] },
+        extra_info: { ...p.info, _manager: p.manager || null, _tasks: p.tasks || [], _documents: p.documents || [] },
         created_at: p.createdAt,
     };
 }
@@ -84,20 +95,23 @@ function rowToProject(row: any): Project {
     let info: ProjectInfo;
     let manager: ProjectManager | null = null;
     let tasks: ProjectTask[] = [];
+    let documents: ProjectDocument[] = [];
     const extra = row.extra_info;
     if (extra && typeof extra === "object") {
         manager = extra._manager || null;
         tasks = Array.isArray(extra._tasks) ? extra._tasks : [];
+        documents = Array.isArray(extra._documents) ? extra._documents : [];
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _manager: _m, _tasks: _t, ...infoData } = extra;
+        const { _manager: _m, _tasks: _t, _documents: _d, ...infoData } = extra;
         info = infoData as ProjectInfo;
     } else if (extra && typeof extra === "string") {
         try {
             const parsed = JSON.parse(extra);
             manager = parsed._manager || null;
             tasks = Array.isArray(parsed._tasks) ? parsed._tasks : [];
+            documents = Array.isArray(parsed._documents) ? parsed._documents : [];
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { _manager: _m, _tasks: _t, ...infoData } = parsed;
+            const { _manager: _m, _tasks: _t, _documents: _d, ...infoData } = parsed;
             info = infoData as ProjectInfo;
         } catch { info = defaultInfo(row); }
     } else {
@@ -110,6 +124,7 @@ function rowToProject(row: any): Project {
         businessPlan: row.bp_data || null,
         manager,
         tasks,
+        documents,
     };
 }
 
@@ -270,5 +285,21 @@ export function useSupabaseProjects() {
         });
     }, []);
 
-    return { projects, loading, saveProject, deleteProject, saveBusinessPlan, saveManager, saveTasks, reload: loadProjects };
+    const saveDocuments = useCallback(async (projectId: string, documents: ProjectDocument[]) => {
+        setProjects((prev) => {
+            const updated = prev.map((p) => p.id === projectId ? { ...p, documents } : p);
+            localStorage.setItem("baara-projects", JSON.stringify(updated));
+            const project = updated.find((p) => p.id === projectId);
+            if (project) {
+                const row = projectToRow(project);
+                supabase.from("projects")
+                    .update({ extra_info: row.extra_info, updated_at: new Date().toISOString() })
+                    .eq("id", projectId)
+                    .then(({ error }) => { if (error) console.error("Documents save error:", error); });
+            }
+            return updated;
+        });
+    }, []);
+
+    return { projects, loading, saveProject, deleteProject, saveBusinessPlan, saveManager, saveTasks, saveDocuments, reload: loadProjects };
 }

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_API_KEY = "AIzaSyDjrMmHMJiNQcyoUyz6Ptbuo9Ql6237-GI";
-// Modèles dans l'ordre de préférence (les plus disponibles en premier)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+// Modèles dans l'ordre de préférence
 const MODELS = [
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "gemini-2.0-flash-lite",
 ];
 const GEMINI_URL = (model: string) =>
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
