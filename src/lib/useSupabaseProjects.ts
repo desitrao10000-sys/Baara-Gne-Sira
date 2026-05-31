@@ -30,6 +30,12 @@ export interface ProjectManager {
     partenaires?: ProjectMember[];
 }
 
+export interface BudgetItem {
+    id: string;
+    designation: string;
+    montant: number;
+}
+
 export interface ProjectTask {
     id: string;
     designation: string;
@@ -39,10 +45,10 @@ export interface ProjectTask {
     dateDebut: string;
     dateFin: string;
     statut: "todo" | "en-cours" | "en-retard" | "termine";
-    budgetEntreesPrev: number;
-    budgetSortiesPrev: number;
-    budgetEntreesReel: number;
-    budgetSortiesReel: number;
+    budgetEntreesPrev: BudgetItem[];
+    budgetSortiesPrev: BudgetItem[];
+    budgetEntreesReel: BudgetItem[];
+    budgetSortiesReel: BudgetItem[];
     risques: string;
     suggestionResolution: string;
     commentaires: string;

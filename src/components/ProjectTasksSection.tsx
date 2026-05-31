@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Check, X, AlertTriangle, ChevronDown, ChevronUp, ClipboardList, Calendar, User, TrendingUp, TrendingDown, MessageSquare, ShieldAlert } from "lucide-react";
-import { ProjectTask } from "@/lib/useSupabaseProjects";
+import { ProjectTask, BudgetItem } from "@/lib/useSupabaseProjects";
 
 interface Props {
     tasks: ProjectTask[] | undefined;
@@ -18,13 +18,43 @@ const STATUTS = [
 
 type StatutValue = "todo" | "en-cours" | "en-retard" | "termine";
 
+function newBudgetItem(): BudgetItem {
+    return { id: crypto.randomUUID(), designation: "", montant: 0 };
+}
+
+function sumItems(items: BudgetItem[]): number {
+    return items.reduce((s, it) => s + (it.montant || 0), 0);
+}
+
+function migrateTask(t: any): ProjectTask {
+    return {
+        id: t.id,
+        designation: t.designation || "",
+        description: t.description || "",
+        objectifs: t.objectifs || "",
+        responsable: t.responsable || "",
+        dateDebut: t.dateDebut || "",
+        dateFin: t.dateFin || "",
+        statut: t.statut || "todo",
+        budgetEntreesPrev: Array.isArray(t.budgetEntreesPrev) ? t.budgetEntreesPrev : (typeof t.budgetEntreesPrev === "number" && t.budgetEntreesPrev > 0 ? [{ id: crypto.randomUUID(), designation: "Entrée prévue", montant: t.budgetEntreesPrev }] : []),
+        budgetSortiesPrev: Array.isArray(t.budgetSortiesPrev) ? t.budgetSortiesPrev : (typeof t.budgetSortiesPrev === "number" && t.budgetSortiesPrev > 0 ? [{ id: crypto.randomUUID(), designation: "Sortie prévue", montant: t.budgetSortiesPrev }] : []),
+        budgetEntreesReel: Array.isArray(t.budgetEntreesReel) ? t.budgetEntreesReel : (typeof t.budgetEntreesReel === "number" && t.budgetEntreesReel > 0 ? [{ id: crypto.randomUUID(), designation: "Entrée réelle", montant: t.budgetEntreesReel }] : []),
+        budgetSortiesReel: Array.isArray(t.budgetSortiesReel) ? t.budgetSortiesReel : (typeof t.budgetSortiesReel === "number" && t.budgetSortiesReel > 0 ? [{ id: crypto.randomUUID(), designation: "Sortie réelle", montant: t.budgetSortiesReel }] : []),
+        risques: t.risques || "",
+        suggestionResolution: t.suggestionResolution || "",
+        commentaires: t.commentaires || "",
+    };
+}
+
 function emptyTask(): ProjectTask {
     return {
         id: crypto.randomUUID(),
         designation: "", description: "", objectifs: "", responsable: "",
         dateDebut: "", dateFin: "", statut: "todo",
-        budgetEntreesPrev: 0, budgetSortiesPrev: 0,
-        budgetEntreesReel: 0, budgetSortiesReel: 0,
+        budgetEntreesPrev: [],
+        budgetSortiesPrev: [],
+        budgetEntreesReel: [],
+        budgetSortiesReel: [],
         risques: "", suggestionResolution: "", commentaires: "",
     };
 }
@@ -33,6 +63,7 @@ function fmt(n: number) { return n.toLocaleString("fr-FR", { maximumFractionDigi
 function fmtDate(d: string) { if (!d) return "—"; try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }); } catch { return d; } }
 
 export default function ProjectTasksSection({ tasks = [], projectMembers = [], onSave }: Props) {
+    const migratedTasks = tasks.map(migrateTask);
     const [showForm, setShowForm] = useState(false);
     const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
     const [form, setForm] = useState<ProjectTask>(emptyTask());
@@ -47,9 +78,9 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
         if (!form.designation.trim()) return;
         let updated: ProjectTask[];
         if (editingTask) {
-            updated = tasks.map((t) => t.id === editingTask.id ? form : t);
+            updated = migratedTasks.map((t) => t.id === editingTask.id ? form : t);
         } else {
-            updated = [...tasks, form];
+            updated = [...migratedTasks, form];
         }
         onSave(updated);
         setShowForm(false);
@@ -57,16 +88,78 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
     };
 
     const deleteTask = (id: string) => {
-        onSave(tasks.filter((t) => t.id !== id));
+        onSave(migratedTasks.filter((t) => t.id !== id));
         setDeleteId(null);
         if (expandedId === id) setExpandedId(null);
     };
 
     const updateStatut = (id: string, statut: StatutValue) => {
-        onSave(tasks.map((t) => t.id === id ? { ...t, statut } : t));
+        onSave(migratedTasks.map((t) => t.id === id ? { ...t, statut } : t));
     };
 
     const statut = (v: StatutValue) => STATUTS.find((s) => s.value === v) ?? STATUTS[0];
+
+    // Budget item helpers
+    const addItem = (key: keyof Pick<ProjectTask, "budgetEntreesPrev" | "budgetSortiesPrev" | "budgetEntreesReel" | "budgetSortiesReel">) => {
+        setForm({ ...form, [key]: [...form[key], newBudgetItem()] });
+    };
+    const removeItem = (key: keyof Pick<ProjectTask, "budgetEntreesPrev" | "budgetSortiesPrev" | "budgetEntreesReel" | "budgetSortiesReel">, itemId: string) => {
+        setForm({ ...form, [key]: form[key].filter((it: BudgetItem) => it.id !== itemId) });
+    };
+    const updateItem = (key: keyof Pick<ProjectTask, "budgetEntreesPrev" | "budgetSortiesPrev" | "budgetEntreesReel" | "budgetSortiesReel">, itemId: string, field: "designation" | "montant", value: string | number) => {
+        setForm({ ...form, [key]: form[key].map((it: BudgetItem) => it.id === itemId ? { ...it, [field]: field === "montant" ? (parseFloat(String(value).replace(/\s/g, "").replace(",", ".")) || 0) : value } : it) });
+    };
+
+    const soldePrev = sumItems(form.budgetEntreesPrev) - sumItems(form.budgetSortiesPrev);
+    const soldeReel = sumItems(form.budgetEntreesReel) - sumItems(form.budgetSortiesReel);
+    const ecart = soldeReel - soldePrev;
+
+    // Render budget items editor
+    const renderBudgetEditor = (
+        title: string,
+        icon: React.ReactNode,
+        bgColor: string,
+        borderColor: string,
+        key: keyof Pick<ProjectTask, "budgetEntreesPrev" | "budgetSortiesPrev" | "budgetEntreesReel" | "budgetSortiesReel">,
+        label: string,
+        signColor: string,
+        sign: string
+    ) => (
+        <div className={`${bgColor} rounded-xl p-3 border ${borderColor} space-y-3`}>
+            <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1">{icon} {title}</p>
+            <p className="text-[11px] font-semibold text-slate-500">{label}</p>
+            <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_110px_28px] gap-1.5 items-center">
+                    <span className="text-[10px] font-black text-slate-500 uppercase">Désignation</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase">Montant</span>
+                    <span></span>
+                </div>
+                {form[key].map((item: BudgetItem) => (
+                    <div key={item.id} className="grid grid-cols-[1fr_110px_28px] gap-1.5 items-center">
+                        <input type="text" value={item.designation} onChange={(e) => updateItem(key, item.id, "designation", e.target.value)} placeholder="Désignation..." inputMode="text"
+                            className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-400" />
+                        <input type="text" inputMode="numeric" value={item.montant || ""} onChange={(e) => updateItem(key, item.id, "montant", e.target.value)} placeholder="0"
+                            className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 outline-none focus:border-blue-400" />
+                        <button onClick={() => removeItem(key, item.id)} className="p-1 rounded-lg bg-red-50 hover:bg-red-100 transition-colors" aria-label="Supprimer">
+                            <X size={12} className="text-red-400" />
+                        </button>
+                    </div>
+                ))}
+                {/* Add button */}
+                <button onClick={() => addItem(key)} className="w-full py-1.5 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-white/50 transition-colors">
+                    <Plus size={12} /> Ajouter une ligne
+                </button>
+                {/* Total */}
+                {form[key].length > 0 && (
+                    <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                        <span className="font-black text-slate-700">Total</span>
+                        <span className={`font-black ${signColor}`}>{sign}{fmt(sumItems(form[key]))} FCFA</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
     const fieldInput = (label: string, key: keyof ProjectTask, placeholder: string, type: "text" | "date" | "number" | "textarea" = "text") => (
         <div key={key}>
@@ -88,9 +181,34 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
         </div>
     );
 
-    const soldePrev = form.budgetEntreesPrev - form.budgetSortiesPrev;
-    const soldeReel = form.budgetEntreesReel - form.budgetSortiesReel;
-    const ecart = soldeReel - soldePrev;
+    // Render budget display for expanded view
+    const renderBudgetDisplay = (
+        title: string, icon: React.ReactNode, bgColor: string, borderColor: string,
+        items: BudgetItem[], totalColor: string, sign: string
+    ) => {
+        const total = sumItems(items);
+        return (
+            <div className={`${bgColor} rounded-xl p-3 border ${borderColor}`}>
+                <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">{icon} {title}</p>
+                {items.length > 0 ? (
+                    <div className="space-y-1">
+                        {items.map((item) => (
+                            <div key={item.id} className="flex justify-between text-xs">
+                                <span className="font-semibold text-slate-600">{item.designation || "—"}</span>
+                                <span className={`font-black ${totalColor}`}>{sign}{fmt(item.montant)} FCFA</span>
+                            </div>
+                        ))}
+                        <div className="flex justify-between text-xs border-t pt-1 mt-1" style={{ borderColor: borderColor.replace("border-", "") }}>
+                            <span className="font-black text-slate-700">Total</span>
+                            <span className={`font-black ${totalColor}`}>{sign}{fmt(total)} FCFA</span>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-xs text-slate-400 font-semibold">Aucun élément</p>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="mt-6 mb-4">
@@ -99,16 +217,20 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                 <span className="text-xs font-black text-teal-600 uppercase tracking-widest">Section 4 — Tâches du projet</span>
                 <div className="h-px flex-1 bg-teal-300" />
             </div>
-            <p className="text-[11px] font-semibold text-slate-500 text-center mb-4">💡 Ces tâches s&apos;affichent aussi dans Todo-Projet et Gantt. Toute modification se répercute partout.</p>
+            <p className="text-[11px] font-semibold text-slate-500 text-center mb-4">💡 Ces tâches s'affichent aussi dans Todo-Projet et Gantt. Toute modification se répercute partout.</p>
 
             {/* Liste des tâches */}
-            {tasks.length > 0 && (
+            {migratedTasks.length > 0 && (
                 <div className="space-y-3 mb-4">
-                    {tasks.map((task) => {
+                    {migratedTasks.map((task) => {
                         const st = statut(task.statut);
                         const expanded = expandedId === task.id;
-                        const soldePrevTask = task.budgetEntreesPrev - task.budgetSortiesPrev;
-                        const soldeReelTask = task.budgetEntreesReel - task.budgetSortiesReel;
+                        const totalEP = sumItems(task.budgetEntreesPrev);
+                        const totalSP = sumItems(task.budgetSortiesPrev);
+                        const totalER = sumItems(task.budgetEntreesReel);
+                        const totalSR = sumItems(task.budgetSortiesReel);
+                        const soldePrevTask = totalEP - totalSP;
+                        const soldeReelTask = totalER - totalSR;
                         const ecartTask = soldeReelTask - soldePrevTask;
                         return (
                             <div key={task.id} className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
@@ -151,21 +273,32 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                         {/* Budget prévisionnel */}
                                         <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
                                             <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={12} /> Budget prévisionnel</p>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Entrées prévues</span><span className="font-black text-green-700">+{fmt(task.budgetEntreesPrev)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Sorties prévues (dépenses total prévisionnel pour la tache)</span><span className="font-black text-red-600">-{fmt(task.budgetSortiesPrev)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs border-t border-blue-200 pt-1 mt-1"><span className="font-black text-blue-700">Solde prévisionnel</span><span className={`font-black ${soldePrevTask >= 0 ? "text-green-700" : "text-red-600"}`}>{soldePrevTask >= 0 ? "+" : ""}{fmt(soldePrevTask)} FCFA</span></div>
+                                            <div className="space-y-2">
+                                                {renderBudgetDisplay("Entrées prévues (paiements clients / fonds portefeuille)", <TrendingUp size={11} className="text-green-600" />, "bg-white", "border-green-200", task.budgetEntreesPrev, "text-green-700", "+")}
+                                                {renderBudgetDisplay("Sorties prévues (dépenses total prévisionnel pour la tache)", <TrendingDown size={11} className="text-red-500" />, "bg-white", "border-red-200", task.budgetSortiesPrev, "text-red-600", "-")}
+                                                <div className="flex justify-between text-xs border-t border-blue-200 pt-1 mt-1">
+                                                    <span className="font-black text-blue-700">Solde prévisionnel</span>
+                                                    <span className={`font-black ${soldePrevTask >= 0 ? "text-green-700" : "text-red-600"}`}>{soldePrevTask >= 0 ? "+" : ""}{fmt(soldePrevTask)} FCFA</span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Budget réel */}
                                         <div className="bg-green-50 rounded-xl p-3 border border-green-200">
                                             <p className="text-[11px] font-black text-green-700 uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingDown size={12} /> Budget suivi réel</p>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Entrées réelles</span><span className="font-black text-green-700">+{fmt(task.budgetEntreesReel)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Sorties réelles</span><span className="font-black text-red-600">-{fmt(task.budgetSortiesReel)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs border-t border-green-200 pt-1 mt-1"><span className="font-black text-green-700">Solde réel</span><span className={`font-black ${soldeReelTask >= 0 ? "text-green-700" : "text-red-600"}`}>{soldeReelTask >= 0 ? "+" : ""}{fmt(soldeReelTask)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs border-t border-green-200 pt-1 mt-1"><span className="font-black text-slate-700">Écart avec prévisionnel</span><span className={`font-black ${ecartTask >= 0 ? "text-green-700" : "text-red-600"}`}>{ecartTask >= 0 ? "+" : ""}{fmt(ecartTask)} FCFA</span></div>
+                                            <div className="space-y-2">
+                                                {renderBudgetDisplay("Entrées réelles (le montant total réel reçu venant de Sorties prévues pour réaliser la tache)", <TrendingUp size={11} className="text-green-600" />, "bg-white", "border-green-200", task.budgetEntreesReel, "text-green-700", "+")}
+                                                {renderBudgetDisplay("Sorties réelles (le montant réellement dépensé pour réaliser la tache)", <TrendingDown size={11} className="text-red-500" />, "bg-white", "border-red-200", task.budgetSortiesReel, "text-red-600", "-")}
+                                                <div className="space-y-1 border-t border-green-200 pt-1 mt-1">
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="font-black text-green-700">Solde réel</span>
+                                                        <span className={`font-black ${soldeReelTask >= 0 ? "text-green-700" : "text-red-600"}`}>{soldeReelTask >= 0 ? "+" : ""}{fmt(soldeReelTask)} FCFA</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="font-black text-slate-700">Écart avec prévisionnel</span>
+                                                        <span className={`font-black ${ecartTask >= 0 ? "text-green-700" : "text-red-600"}`}>{ecartTask >= 0 ? "+" : ""}{fmt(ecartTask)} FCFA</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -206,7 +339,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                 </div>
             )}
 
-            {tasks.length === 0 && !showForm && (
+            {migratedTasks.length === 0 && !showForm && (
                 <div className="text-center py-8 mb-4">
                     <ClipboardList size={40} className="text-teal-200 mx-auto mb-3" />
                     <p className="text-slate-400 font-bold text-sm">Aucune tâche pour ce projet</p>
@@ -217,7 +350,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
             {/* Bouton ajouter */}
             {!showForm && (
                 <button onClick={openAdd} className="w-full p-4 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 active:scale-95 transition-transform">
-                    <Plus size={18} /> {tasks.length > 0 ? "Ajouter une tâche" : "Créer la première tâche"}
+                    <Plus size={18} /> {migratedTasks.length > 0 ? "Ajouter une tâche" : "Créer la première tâche"}
                 </button>
             )}
 
@@ -279,52 +412,36 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                     </div>
 
                     {/* Budget prévisionnel */}
-                    <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 space-y-3">
-                        <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider flex items-center gap-1"><TrendingUp size={12} /> Budget prévisionnel</p>
-                        <div>
-                            <label className="text-[11px] font-semibold text-blue-600 mb-1 block">Entrées prévues (paiements clients / fonds portefeuille)</label>
-                            <input type="text" inputMode="numeric" value={String(form.budgetEntreesPrev || "")} onChange={(e) => setForm({ ...form, budgetEntreesPrev: parseFloat(e.target.value.replace(/\s/g, "")) || 0 })} placeholder="0"
-                                className="w-full p-2.5 rounded-xl border-2 border-blue-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-blue-500" />
-                        </div>
-                        <div>
-                            <label className="text-[11px] font-semibold text-blue-600 mb-1 block">Sorties prévues (dépenses total prévisionnel pour la tache)</label>
-                            <input type="text" inputMode="numeric" value={String(form.budgetSortiesPrev || "")} onChange={(e) => setForm({ ...form, budgetSortiesPrev: parseFloat(e.target.value.replace(/\s/g, "")) || 0 })} placeholder="0"
-                                className="w-full p-2.5 rounded-xl border-2 border-blue-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-blue-500" />
-                        </div>
-                        <div className="flex justify-between text-sm border-t border-blue-200 pt-2">
+                    {renderBudgetEditor("Budget prévisionnel — Entrées", <TrendingUp size={12} className="text-blue-600" />, "bg-blue-50", "border-blue-200", "budgetEntreesPrev", "Entrées prévues (paiements clients / fonds portefeuille)", "text-green-700", "+")}
+                    {renderBudgetEditor("Budget prévisionnel — Sorties", <TrendingDown size={12} className="text-blue-600" />, "bg-blue-50", "border-blue-200", "budgetSortiesPrev", "Sorties prévues (dépenses total prévisionnel pour la tache)", "text-red-600", "-")}
+
+                    {/* Solde prévisionnel */}
+                    <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
+                        <div className="flex justify-between text-sm">
                             <span className="font-black text-blue-700">Solde prévisionnel</span>
                             <span className={`font-black ${soldePrev >= 0 ? "text-green-700" : "text-red-600"}`}>{soldePrev >= 0 ? "+" : ""}{fmt(soldePrev)} FCFA</span>
                         </div>
                     </div>
 
                     {/* Budget réel */}
-                    <div className="bg-green-50 rounded-xl p-3 border border-green-200 space-y-3">
-                        <p className="text-[11px] font-black text-green-700 uppercase tracking-wider flex items-center gap-1"><TrendingDown size={12} /> Budget suivi réel</p>
-                        <div>
-                            <label className="text-[11px] font-semibold text-green-600 mb-1 block">Entrées réelles (reçus / fonds utilisés)</label>
-                            <input type="text" inputMode="numeric" value={String(form.budgetEntreesReel || "")} onChange={(e) => setForm({ ...form, budgetEntreesReel: parseFloat(e.target.value.replace(/\s/g, "")) || 0 })} placeholder="0"
-                                className="w-full p-2.5 rounded-xl border-2 border-green-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-green-500" />
+                    {renderBudgetEditor("Budget réel — Entrées", <TrendingUp size={12} className="text-green-600" />, "bg-green-50", "border-green-200", "budgetEntreesReel", "Entrées réelles (le montant total réel reçu venant de Sorties prévues pour réaliser la tache)", "text-green-700", "+")}
+                    {renderBudgetEditor("Budget réel — Sorties", <TrendingDown size={12} className="text-green-600" />, "bg-green-50", "border-green-200", "budgetSortiesReel", "Sorties réelles (le montant réellement dépensé pour réaliser la tache)", "text-red-600", "-")}
+
+                    {/* Solde réel + écart */}
+                    <div className="bg-green-50 rounded-xl p-3 border border-green-200 space-y-1">
+                        <div className="flex justify-between text-sm">
+                            <span className="font-black text-green-700">Solde réel</span>
+                            <span className={`font-black ${soldeReel >= 0 ? "text-green-700" : "text-red-600"}`}>{soldeReel >= 0 ? "+" : ""}{fmt(soldeReel)} FCFA</span>
                         </div>
-                        <div>
-                            <label className="text-[11px] font-semibold text-green-600 mb-1 block">Sorties réelles</label>
-                            <input type="text" inputMode="numeric" value={String(form.budgetSortiesReel || "")} onChange={(e) => setForm({ ...form, budgetSortiesReel: parseFloat(e.target.value.replace(/\s/g, "")) || 0 })} placeholder="0"
-                                className="w-full p-2.5 rounded-xl border-2 border-green-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-green-500" />
-                        </div>
-                        <div className="border-t border-green-200 pt-2 space-y-1">
-                            <div className="flex justify-between text-sm">
-                                <span className="font-black text-green-700">Solde réel</span>
-                                <span className={`font-black ${soldeReel >= 0 ? "text-green-700" : "text-red-600"}`}>{soldeReel >= 0 ? "+" : ""}{fmt(soldeReel)} FCFA</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="font-black text-slate-700">Écart prévisionnel</span>
-                                <span className={`font-black ${ecart >= 0 ? "text-green-700" : "text-red-600"}`}>{ecart >= 0 ? "+" : ""}{fmt(ecart)} FCFA</span>
-                            </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="font-black text-slate-700">Écart prévisionnel</span>
+                            <span className={`font-black ${ecart >= 0 ? "text-green-700" : "text-red-600"}`}>{ecart >= 0 ? "+" : ""}{fmt(ecart)} FCFA</span>
                         </div>
                     </div>
 
                     {/* Risques */}
                     <div className="bg-orange-50 rounded-xl p-3 border border-orange-200 space-y-3">
-                        <p className="text-[11px] font-black text-orange-700 uppercase tracking-wider flex items-center gap-1"><ShieldAlert size={12} /> Risques &amp; Résolution</p>
+                        <p className="text-[11px] font-black text-orange-700 uppercase tracking-wider flex items-center gap-1"><ShieldAlert size={12} /> Risques & Résolution</p>
                         <div>
                             <label className="text-[11px] font-semibold text-orange-600 mb-1 block">Risques éventuels</label>
                             <textarea value={form.risques} onChange={(e) => setForm({ ...form, risques: e.target.value })} placeholder="Décris les risques potentiels..." rows={2} inputMode="text"
