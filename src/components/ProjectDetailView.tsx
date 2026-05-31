@@ -161,11 +161,6 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                 </div>
                             )}
                         </div>
-                        <div className="bg-yellow-50 px-4 py-3 border-t border-yellow-100">
-                            <button onClick={() => { /* future edit mode */ }} className="w-full py-2 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-yellow-100 transition-colors">
-                                <Edit3 size={12} /> Modifier les informations
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -372,7 +367,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                         <p className="text-sm font-black text-slate-900">{fmt(r.margeBrute)}</p>
                                                     </div>
                                                     <div className="bg-slate-50 rounded-xl p-2 text-center">
-                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">BAI</p>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Bénéfice Avant Impôt</p>
                                                         <p className={`text-sm font-black ${r.bai >= 0 ? "text-slate-900" : "text-red-600"}`}>{fmt(r.bai)}</p>
                                                     </div>
                                                     <div className="bg-red-50 rounded-xl p-2 text-center">
@@ -384,7 +379,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                         <p className={`text-sm font-black ${r.benefNet >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(r.benefNet)}</p>
                                                     </div>
                                                     <div className="bg-blue-50 rounded-xl p-2 text-center col-span-2">
-                                                        <p className="text-[10px] font-bold text-blue-500 uppercase">FNT Actualisé</p>
+                                                        <p className="text-[10px] font-bold text-blue-500 uppercase">Flux Net de Trésorerie Actualisé</p>
                                                         <p className="text-sm font-black text-blue-700">{fmt(r.fntActu)} FCFA</p>
                                                     </div>
                                                 </div>

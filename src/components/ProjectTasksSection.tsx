@@ -153,7 +153,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                             <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1"><TrendingUp size={12} /> Budget prévisionnel</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Entrées prévues</span><span className="font-black text-green-700">+{fmt(task.budgetEntreesPrev)} FCFA</span></div>
-                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Sorties prévues</span><span className="font-black text-red-600">-{fmt(task.budgetSortiesPrev)} FCFA</span></div>
+                                                <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">Sorties prévues (dépenses total prévisionnel pour la tache)</span><span className="font-black text-red-600">-{fmt(task.budgetSortiesPrev)} FCFA</span></div>
                                                 <div className="flex justify-between text-xs border-t border-blue-200 pt-1 mt-1"><span className="font-black text-blue-700">Solde prévisionnel</span><span className={`font-black ${soldePrevTask >= 0 ? "text-green-700" : "text-red-600"}`}>{soldePrevTask >= 0 ? "+" : ""}{fmt(soldePrevTask)} FCFA</span></div>
                                             </div>
                                         </div>
@@ -287,7 +287,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                 className="w-full p-2.5 rounded-xl border-2 border-blue-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-blue-500" />
                         </div>
                         <div>
-                            <label className="text-[11px] font-semibold text-blue-600 mb-1 block">Sorties prévues (dépenses)</label>
+                            <label className="text-[11px] font-semibold text-blue-600 mb-1 block">Sorties prévues (dépenses total prévisionnel pour la tache)</label>
                             <input type="text" inputMode="numeric" value={String(form.budgetSortiesPrev || "")} onChange={(e) => setForm({ ...form, budgetSortiesPrev: parseFloat(e.target.value.replace(/\s/g, "")) || 0 })} placeholder="0"
                                 className="w-full p-2.5 rounded-xl border-2 border-blue-200 bg-white text-sm font-bold text-slate-900 outline-none focus:border-blue-500" />
                         </div>
