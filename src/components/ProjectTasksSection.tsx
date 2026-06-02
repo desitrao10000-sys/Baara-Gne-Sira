@@ -267,8 +267,8 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                 {/* Détails expansibles */}
                                 {expanded && (
                                     <div className="border-t border-slate-100 p-4 space-y-3 bg-slate-50/50">
-                                        {task.description && <div><p className="text-[11px] font-black text-teal-600 uppercase tracking-wider mb-1">Description</p><p className="text-sm text-slate-700 font-semibold">{task.description}</p></div>}
-                                        {task.objectifs && <div><p className="text-[11px] font-black text-teal-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm text-slate-700 font-semibold">{task.objectifs}</p></div>}
+                                        {task.description && <div><p className="text-[11px] font-black text-teal-600 uppercase tracking-wider mb-1">Description</p><p className="text-sm text-slate-700 font-semibold break-words whitespace-pre-wrap">{task.description}</p></div>}
+                                        {task.objectifs && <div><p className="text-[11px] font-black text-teal-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm text-slate-700 font-semibold break-words whitespace-pre-wrap">{task.objectifs}</p></div>}
 
                                         {/* Budget prévisionnel */}
                                         <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
@@ -305,15 +305,15 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                         {task.risques && (
                                             <div className="bg-orange-50 rounded-xl p-3 border border-orange-200">
                                                 <p className="text-[11px] font-black text-orange-700 uppercase tracking-wider mb-1 flex items-center gap-1"><ShieldAlert size={12} /> Risques</p>
-                                                <p className="text-xs text-slate-700 font-semibold">{task.risques}</p>
-                                                {task.suggestionResolution && <><p className="text-[11px] font-black text-orange-700 uppercase tracking-wider mb-1 mt-2">Suggestion de résolution</p><p className="text-xs text-slate-700 font-semibold">{task.suggestionResolution}</p></>}
+                                                <p className="text-xs text-slate-700 font-semibold break-words whitespace-pre-wrap">{task.risques}</p>
+                                                {task.suggestionResolution && <><p className="text-[11px] font-black text-orange-700 uppercase tracking-wider mb-1 mt-2">Suggestion de résolution</p><p className="text-xs text-slate-700 font-semibold break-words whitespace-pre-wrap">{task.suggestionResolution}</p></>}
                                             </div>
                                         )}
 
                                         {task.commentaires && (
                                             <div className="bg-slate-100 rounded-xl p-3">
                                                 <p className="text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1 flex items-center gap-1"><MessageSquare size={12} /> Commentaires</p>
-                                                <p className="text-xs text-slate-700 font-semibold">{task.commentaires}</p>
+                                                <p className="text-xs text-slate-700 font-semibold break-words whitespace-pre-wrap">{task.commentaires}</p>
                                             </div>
                                         )}
 
