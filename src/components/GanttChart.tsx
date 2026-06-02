@@ -5,6 +5,7 @@ import { Project, ProjectTask } from "@/lib/useSupabaseProjects";
 import {
     CalendarRange, ChevronDown, ChevronRight, AlertTriangle,
     Filter, Clock, X, ArrowUp, ArrowDown, CalendarDays, RotateCcw,
+    ArrowRight, BarChart3, Eye, ZoomIn, LayoutGrid, GitBranch,
 } from "lucide-react";
 
 interface GanttTask { taskId: string; task: ProjectTask; projectName: string; projectId: string; }
@@ -181,8 +182,75 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
     );
 }
 
+// ─── Page intro Gantt ──────────
+function GanttIntro({ totalTasks, totalProjects, onEnter }: { totalTasks: number; totalProjects: number; onEnter: () => void }) {
+    return (
+        <div className="flex-1 overflow-y-auto slide-in" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="flex flex-col items-center p-5 pb-6 min-h-full">
+                <div className="w-full rounded-3xl bg-gradient-to-br from-emerald-700 to-teal-600 p-6 mb-5 shadow-xl text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-white/20 mx-auto flex items-center justify-center mb-3">
+                        <BarChart3 size={34} className="text-amber-300" />
+                    </div>
+                    <h1 className="text-[22px] font-black text-white mb-1 uppercase tracking-wide">Diagramme de Gantt</h1>
+                    <p className="text-[13px] font-bold text-amber-300">{totalTasks} tâche{totalTasks > 1 ? "s" : ""} • {totalProjects} projet{totalProjects > 1 ? "s" : ""}</p>
+                </div>
+                <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-5 w-full mb-4">
+                    <h2 className="text-[15px] font-black text-emerald-800 mb-3">📊 Qu'est-ce que le Gantt ?</h2>
+                    <p className="text-[13px] text-slate-700 leading-relaxed mb-4">
+                        Le <span className="font-black text-emerald-800">Diagramme de Gantt</span> offre une vue chronologique de toutes vos tâches avec <span className="font-bold text-teal-700">visualisation temporelle</span> et synchronisation en temps réel.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">📋</span>
+                            <span className="text-[12px] font-black text-blue-700">À faire</span>
+                        </div>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">⏳</span>
+                            <span className="text-[12px] font-black text-yellow-700">En cours</span>
+                        </div>
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">⚠️</span>
+                            <span className="text-[12px] font-black text-red-700">En retard</span>
+                        </div>
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">✅</span>
+                            <span className="text-[12px] font-black text-green-700">Terminé</span>
+                        </div>
+                    </div>
+                    <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
+                        📅 Visualisez vos tâches dans le temps. Filtrez par <span className="font-bold">statut</span>, changez de <span className="font-bold">vue</span> (Cartes ou Timeline), et ajustez le <span className="font-bold">zoom</span> (Mois, Semaine, Jour). Cliquez sur une tâche pour voir ses détails.
+                    </p>
+                    <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 mb-3">
+                        <h3 className="text-[12px] font-black text-teal-800 mb-1.5">👁️ Vues Cartes et Timeline</h3>
+                        <p className="text-[11px] text-teal-700 leading-relaxed">
+                            <span className="font-bold">Mode Cartes</span> : vue synthétique avec barres de progression et indicateurs visuels. <span className="font-bold">Mode Timeline</span> : vue chronologique complète avec blocs temporels et positionnement des tâches dans le temps.
+                        </p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                        <h3 className="text-[12px] font-black text-amber-800 mb-1.5">🔍 Zoom et Période</h3>
+                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                            Ajustez le niveau de détail : <span className="font-bold">Mois</span> (demi-décades), <span className="font-bold">Semaine</span> ou <span className="font-bold">Jour</span>. Sélectionnez une période personnalisée pour cibler un intervalle précis.
+                        </p>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                        <h3 className="text-[12px] font-black text-emerald-800 mb-1.5">🎯 Filtrer par statut</h3>
+                        <p className="text-[11px] text-emerald-700 leading-relaxed">
+                            Filtrez les tâches par statut en un clic : <span className="font-bold text-yellow-700">⏳ En cours</span>, <span className="font-bold text-blue-700">📋 À faire</span>, <span className="font-bold text-red-700">⚠️ En retard</span> ou <span className="font-bold text-green-700">✅ Terminé</span>. Seules les tâches correspondantes s'affichent.
+                        </p>
+                    </div>
+                </div>
+                <button onClick={onEnter}
+                    className="w-full py-4 bg-gradient-to-r from-emerald-700 to-teal-600 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform text-[15px]">
+                    Accéder au vue de Gantt <ArrowRight size={20} className="text-amber-300" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ─── Composant principal ──────────────────────────────────
 export default function GanttChart({ projects }: GanttChartProps) {
+    const [showGantt, setShowGantt] = useState(false);
     const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [zoom, setZoom] = useState<ZoomLevel>("mois");
@@ -268,6 +336,16 @@ export default function GanttChart({ projects }: GanttChartProps) {
     }, [sortedBlocks, grouped]);
 
     const toggleProject = (pid: string) => { setCollapsedProjects(prev => { const n = new Set(prev); if (n.has(pid)) n.delete(pid); else n.add(pid); return n; }); };
+
+    // Stats pour l'intro
+    const ganttStats = useMemo(() => {
+        let count = 0;
+        for (const p of projects) { if (p.tasks?.length) count += p.tasks.length; }
+        const projCount = projects.filter(p => p.tasks?.length).length;
+        return { tasks: count, projects: projCount };
+    }, [projects]);
+
+    if (!showGantt) return <GanttIntro totalTasks={ganttStats.tasks} totalProjects={ganttStats.projects} onEnter={() => setShowGantt(true)} />;
 
     if (!allTasks.length) {
         return (
