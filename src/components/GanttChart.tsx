@@ -24,7 +24,7 @@ function fmtFull(d: Date): string { return d.toLocaleDateString("fr-FR", { day: 
 
 type ZoomLevel = "mois" | "semaine" | "jour";
 
-interface TimeBlock { label: string; startDate: Date; endDate: Date; }
+interface TimeBlock { label: string; shortLabel: string; startDate: Date; endDate: Date; totalDays: number; }
 
 function getTimeBlocks(start: Date, end: Date, zoom: ZoomLevel): TimeBlock[] {
     const blocks: TimeBlock[] = [];
@@ -33,21 +33,22 @@ function getTimeBlocks(start: Date, end: Date, zoom: ZoomLevel): TimeBlock[] {
         if (zoom === "mois") {
             const y = cur.getFullYear(), m = cur.getMonth();
             const monthName = cur.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-            blocks.push({ label: `${monthName} — Début (01-10)`, startDate: new Date(y, m, 1), endDate: new Date(y, m, 10) });
-            blocks.push({ label: `${monthName} — Milieu (11-20)`, startDate: new Date(y, m, 11), endDate: new Date(y, m, 20) });
-            blocks.push({ label: `${monthName} — Fin (21-31)`, startDate: new Date(y, m, 21), endDate: new Date(y, m + 1, 0) });
+            const b1s = new Date(y, m, 1), b1e = new Date(y, m, 10);
+            blocks.push({ label: `${monthName} — Début (01-10)`, shortLabel: "01-10", startDate: b1s, endDate: b1e, totalDays: daysBetween(b1s, b1e) + 1 });
+            const b2s = new Date(y, m, 11), b2e = new Date(y, m, 20);
+            blocks.push({ label: `${monthName} — Milieu (11-20)`, shortLabel: "11-20", startDate: b2s, endDate: b2e, totalDays: daysBetween(b2s, b2e) + 1 });
+            const b3s = new Date(y, m, 21), b3e = new Date(y, m + 1, 0);
+            blocks.push({ label: `${monthName} — Fin (21-31)`, shortLabel: "21-31", startDate: b3s, endDate: b3e, totalDays: daysBetween(b3s, b3e) + 1 });
             cur.setMonth(cur.getMonth() + 1);
         } else if (zoom === "semaine") {
-            const weekStart = new Date(cur);
-            const dayOfWeek = cur.getDay();
-            const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-            weekStart.setDate(cur.getDate() - diff);
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
-            blocks.push({ label: `${fmtShort(weekStart)} → ${fmtShort(weekEnd)}`, startDate: weekStart, endDate: weekEnd });
-            cur.setDate(weekEnd.getDate() + 1);
+            const ws = new Date(cur);
+            const dow = cur.getDay();
+            ws.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1));
+            const we = new Date(ws); we.setDate(ws.getDate() + 6);
+            blocks.push({ label: `${fmtShort(ws)} → ${fmtShort(we)}`, shortLabel: `${ws.getDate()}-${we.getDate()}`, startDate: ws, endDate: we, totalDays: 7 });
+            cur.setDate(we.getDate() + 1);
         } else {
-            blocks.push({ label: fmtFull(cur), startDate: new Date(cur), endDate: new Date(cur) });
+            blocks.push({ label: fmtFull(cur), shortLabel: `${cur.getDate()}`, startDate: new Date(cur), endDate: new Date(cur), totalDays: 1 });
             cur.setDate(cur.getDate() + 1);
         }
     }
@@ -61,7 +62,7 @@ function taskInBlock(task: ProjectTask, block: TimeBlock): boolean {
     return tS <= block.endDate && tE >= block.startDate;
 }
 
-// ─── Carte Tâche ──────────────────────────────────────────
+// ─── Carte Tâche (mode Cartes) ────────────────────────────
 function TaskCard({ ganttTask, onSelect, isSelected }: { ganttTask: GanttTask; onSelect: () => void; isSelected: boolean }) {
     const { task, projectName } = ganttTask;
     const cfg = statusConfig[task.statut] || statusConfig["todo"];
@@ -110,10 +111,10 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
     const isLate = task.statut === "en-retard" && eD && eD < new Date();
     const dL = isLate && eD ? daysBetween(eD, new Date()) : 0;
 
-    const totalPrevuE = (task.budgetEntreesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const totalPrevuS = (task.budgetSortiesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const totalReelE = (task.budgetEntreesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const totalReelS = (task.budgetSortiesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
+    const tPE = (task.budgetEntreesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
+    const tPS = (task.budgetSortiesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
+    const tRE = (task.budgetEntreesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
+    const tRS = (task.budgetSortiesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
 
     return (
         <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[70vh] flex flex-col">
@@ -127,13 +128,10 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
                 </button>
             </div>
             <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
-                {/* Statut + Projet */}
                 <div className="flex flex-wrap items-center gap-2">
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>
                     <span className="text-[10px] font-semibold text-slate-500">📁 {projectName}</span>
                 </div>
-
-                {/* Dates */}
                 {(sD || eD) && (
                     <div className="bg-slate-50 rounded-xl p-3">
                         <div className="flex items-center gap-3 text-[11px] font-semibold">
@@ -144,84 +142,28 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
                         </div>
                         {isLate && dL > 0 && (
                             <div className="flex items-center gap-1 mt-2 text-red-600 bg-red-50 rounded-lg px-2 py-1">
-                                <AlertTriangle size={12} /><span className="text-[10px] font-bold">En retard de {dL} jour(s)</span>
+                                <AlertTriangle size={12} /><span className="text-[10px] font-bold">Retard : {dL} jour(s)</span>
                             </div>
                         )}
                     </div>
                 )}
-
-                {/* Description */}
-                {task.description && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Description</h4>
-                        <p className="text-[11px] text-slate-700 leading-relaxed">{task.description}</p>
-                    </div>
-                )}
-
-                {/* Responsable */}
-                {task.responsable && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Responsable</h4>
-                        <p className="text-[11px] text-slate-700 font-semibold">👤 {task.responsable}</p>
-                    </div>
-                )}
-
-                {/* Objectifs */}
-                {task.objectifs && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Objectifs</h4>
-                        <p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs}</p>
-                    </div>
-                )}
-
-                {/* Budget */}
-                {(totalPrevuE > 0 || totalPrevuS > 0 || totalReelE > 0 || totalReelS > 0) && (
+                {task.description && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description}</p></div>)}
+                {task.responsable && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">👤 {task.responsable}</p></div>)}
+                {task.objectifs && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs}</p></div>)}
+                {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) && (
                     <div>
                         <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Budget</h4>
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-green-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span>
-                                <span className="text-[12px] font-black text-green-700">{totalPrevuE.toLocaleString("fr-FR")} FCFA</span>
-                            </div>
-                            <div className="bg-red-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span>
-                                <span className="text-[12px] font-black text-red-700">{totalPrevuS.toLocaleString("fr-FR")} FCFA</span>
-                            </div>
-                            <div className="bg-emerald-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span>
-                                <span className="text-[12px] font-black text-emerald-700">{totalReelE.toLocaleString("fr-FR")} FCFA</span>
-                            </div>
-                            <div className="bg-orange-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span>
-                                <span className="text-[12px] font-black text-orange-700">{totalReelS.toLocaleString("fr-FR")} FCFA</span>
-                            </div>
+                            <div className="bg-green-50 rounded-xl p-2"><span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span><span className="text-[12px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span></div>
+                            <div className="bg-red-50 rounded-xl p-2"><span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span><span className="text-[12px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span></div>
+                            <div className="bg-emerald-50 rounded-xl p-2"><span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span><span className="text-[12px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span></div>
+                            <div className="bg-orange-50 rounded-xl p-2"><span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span><span className="text-[12px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span></div>
                         </div>
                     </div>
                 )}
-
-                {/* Risques */}
-                {task.risques && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Risques</h4>
-                        <p className="text-[11px] text-slate-700 leading-relaxed">{task.risques}</p>
-                    </div>
-                )}
-
-                {/* Suggestion */}
-                {task.suggestionResolution && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Suggestion de résolution</h4>
-                        <p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution}</p>
-                    </div>
-                )}
-
-                {/* Commentaires */}
-                {task.commentaires && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Commentaires</h4>
-                        <p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires}</p>
-                    </div>
-                )}
+                {task.risques && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.risques}</p></div>)}
+                {task.suggestionResolution && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution}</p></div>)}
+                {task.commentaires && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires}</p></div>)}
             </div>
         </div>
     );
@@ -238,26 +180,15 @@ export default function GanttChart({ projects }: GanttChartProps) {
 
     const allTasks = useMemo<GanttTask[]>(() => {
         const t: GanttTask[] = [];
-        for (const p of projects) {
-            if (p.tasks?.length) for (const task of p.tasks) t.push({ taskId: task.id, task, projectName: p.info.name, projectId: p.id });
-        }
+        for (const p of projects) { if (p.tasks?.length) for (const task of p.tasks) t.push({ taskId: task.id, task, projectName: p.info.name, projectId: p.id }); }
         return t;
     }, [projects]);
 
     const filtered = useMemo(() => filterStatus === "all" ? allTasks : allTasks.filter(t => t.task.statut === filterStatus), [allTasks, filterStatus]);
+    const grouped = useMemo(() => { const m = new Map<string, GanttTask[]>(); for (const t of filtered) { if (!m.has(t.projectId)) m.set(t.projectId, []); m.get(t.projectId)!.push(t); } return m; }, [filtered]);
+    const stats = useMemo(() => { const s = { todo: 0, "en-cours": 0, "en-retard": 0, termine: 0, total: allTasks.length }; for (const t of allTasks) s[t.task.statut]++; return s; }, [allTasks]);
 
-    const grouped = useMemo(() => {
-        const m = new Map<string, GanttTask[]>();
-        for (const t of filtered) { if (!m.has(t.projectId)) m.set(t.projectId, []); m.get(t.projectId)!.push(t); }
-        return m;
-    }, [filtered]);
-
-    const stats = useMemo(() => {
-        const s = { todo: 0, "en-cours": 0, "en-retard": 0, termine: 0, total: allTasks.length };
-        for (const t of allTasks) s[t.task.statut]++; return s;
-    }, [allTasks]);
-
-    // Calculer plage de dates
+    // Plage de dates
     const { dateStart, dateEnd } = useMemo(() => {
         if (!filtered.length) { const n = new Date(); return { dateStart: new Date(n.getFullYear(), n.getMonth(), 1), dateEnd: new Date(n.getFullYear(), n.getMonth() + 2, 0) }; }
         let mn = Infinity, mx = -Infinity;
@@ -269,48 +200,36 @@ export default function GanttChart({ projects }: GanttChartProps) {
         }
         if (mn === Infinity) mn = Date.now(); if (mx === -Infinity) mx = Date.now() + 60 * 86400000;
         const s = new Date(mn), e = new Date(mx);
-        // Ajuster au début/fin du mois pour le zoom mois
         if (zoom === "mois") { s.setDate(1); e.setMonth(e.getMonth() + 1); e.setDate(0); }
         return { dateStart: s, dateEnd: e };
     }, [filtered, zoom]);
 
     const blocks = useMemo(() => getTimeBlocks(dateStart, dateEnd, zoom), [dateStart, dateEnd, zoom]);
-
     const sortedBlocks = sortOrder === "desc" ? [...blocks].reverse() : blocks;
 
-    const toggleProject = (pid: string) => {
-        setCollapsedProjects(prev => { const n = new Set(prev); if (n.has(pid)) n.delete(pid); else n.add(pid); return n; });
-    };
+    const toggleProject = (pid: string) => { setCollapsedProjects(prev => { const n = new Set(prev); if (n.has(pid)) n.delete(pid); else n.add(pid); return n; }); };
 
     if (!allTasks.length) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-6">
-                <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center mb-4">
-                    <CalendarRange size={36} className="text-primary-yellow" />
-                </div>
+                <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center mb-4"><CalendarRange size={36} className="text-primary-yellow" /></div>
                 <h2 className="text-lg font-black text-slate-800 mb-2">Diagramme de Gantt</h2>
-                <p className="text-xs text-slate-600 font-semibold text-center">Aucune tâche trouvée. Créez des projets avec des tâches.</p>
+                <p className="text-xs text-slate-600 font-semibold text-center">Aucune tâche. Créez des projets avec des tâches.</p>
             </div>
         );
     }
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
-            {/* ── Barre supérieure ── */}
+            {/* Barre supérieure */}
             <div className="shrink-0 bg-white border-b border-slate-200 px-3 py-2.5">
                 <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                        <CalendarRange size={16} className="text-primary-yellow" />
-                        <h2 className="text-[12px] font-black text-slate-800 uppercase">Gantt</h2>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="flex items-center bg-slate-100 rounded-xl p-0.5">
-                            <button onClick={() => setViewMode("cartes")} className={`px-2.5 py-1 rounded-[10px] text-[10px] font-bold transition-all ${viewMode === "cartes" ? "bg-vibrant-blue text-white shadow-sm" : "text-slate-500"}`}>Cartes</button>
-                            <button onClick={() => setViewMode("timeline")} className={`px-2.5 py-1 rounded-[10px] text-[10px] font-bold transition-all ${viewMode === "timeline" ? "bg-vibrant-blue text-white shadow-sm" : "text-slate-500"}`}>Timeline</button>
-                        </div>
+                    <div className="flex items-center gap-1.5"><CalendarRange size={16} className="text-primary-yellow" /><h2 className="text-[12px] font-black text-slate-800 uppercase">Gantt</h2></div>
+                    <div className="flex items-center bg-slate-100 rounded-xl p-0.5">
+                        <button onClick={() => setViewMode("cartes")} className={`px-2.5 py-1 rounded-[10px] text-[10px] font-bold transition-all ${viewMode === "cartes" ? "bg-vibrant-blue text-white shadow-sm" : "text-slate-500"}`}>Cartes</button>
+                        <button onClick={() => setViewMode("timeline")} className={`px-2.5 py-1 rounded-[10px] text-[10px] font-bold transition-all ${viewMode === "timeline" ? "bg-vibrant-blue text-white shadow-sm" : "text-slate-500"}`}>Timeline</button>
                     </div>
                 </div>
-                {/* Filtres */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                     <Filter size={9} className="text-slate-400 shrink-0" />
                     <button onClick={() => setFilterStatus("all")} className={`px-2 py-1 rounded-lg text-[9px] font-bold shrink-0 ${filterStatus === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>Tous ({stats.total})</button>
@@ -320,7 +239,6 @@ export default function GanttChart({ projects }: GanttChartProps) {
                         </button>
                     ))}
                 </div>
-                {/* Zoom + Tri */}
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1">
                         <Clock size={10} className="text-slate-400" />
@@ -329,10 +247,8 @@ export default function GanttChart({ projects }: GanttChartProps) {
                         ))}
                     </div>
                     {viewMode === "timeline" && (
-                        <button onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[9px] font-bold text-slate-600">
-                            {sortOrder === "desc" ? <ArrowDown size={10} /> : <ArrowUp size={10} />}
-                            {sortOrder === "desc" ? "Récent ↑" : "Ancien ↓"}
+                        <button onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[9px] font-bold text-slate-600">
+                            {sortOrder === "desc" ? <ArrowDown size={10} /> : <ArrowUp size={10} />}{sortOrder === "desc" ? "Récent ↑" : "Ancien ↓"}
                         </button>
                     )}
                 </div>
@@ -362,45 +278,73 @@ export default function GanttChart({ projects }: GanttChartProps) {
                 </div>
             )}
 
-            {/* ═══ MODE TIMELINE VERTICAL ═══ */}
+            {/* ═══ MODE TIMELINE VERTICAL AVEC BARRES ═══ */}
             {viewMode === "timeline" && (
                 <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
                     {sortedBlocks.map((block, bi) => {
-                        // Tâches dans ce bloc
                         const blockTasks: GanttTask[] = [];
-                        for (const [, tasks] of grouped) {
-                            for (const gt of tasks) { if (taskInBlock(gt.task, block)) blockTasks.push(gt); }
-                        }
-                        const isCurrentBlock = new Date() >= block.startDate && new Date() <= block.endDate;
+                        for (const [, tasks] of grouped) { for (const gt of tasks) { if (taskInBlock(gt.task, block)) blockTasks.push(gt); } }
+                        const isCurrent = new Date() >= block.startDate && new Date() <= block.endDate;
 
                         return (
-                            <div key={bi} className={`border-b-2 ${isCurrentBlock ? "border-primary-yellow bg-amber-50/30" : "border-slate-100"}`}>
-                                {/* En-tête bloc */}
-                                <div className={`sticky top-0 z-10 px-3 py-2 flex items-center gap-2 ${isCurrentBlock ? "bg-amber-50" : "bg-white"}`}>
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${isCurrentBlock ? "bg-primary-yellow" : "bg-slate-300"}`} />
-                                    <span className={`text-[10px] font-black ${isCurrentBlock ? "text-primary-yellow" : "text-slate-500"}`}>{block.label}</span>
-                                    <span className="text-[9px] font-bold text-slate-300 ml-auto">{blockTasks.length} tâche(s)</span>
+                            <div key={bi} className={`border-b-2 ${isCurrent ? "border-primary-yellow/50 bg-amber-50/20" : "border-slate-100"}`}>
+                                {/* En-tête période */}
+                                <div className={`sticky top-0 z-10 px-3 py-2 flex items-center gap-2 ${isCurrent ? "bg-amber-50" : "bg-slate-50"}`}>
+                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCurrent ? "bg-primary-yellow" : "bg-slate-300"}`} />
+                                    <span className={`text-[11px] font-black ${isCurrent ? "text-primary-yellow" : "text-slate-500"}`}>{block.label}</span>
+                                    <span className="text-[9px] font-bold text-slate-300 ml-auto">{blockTasks.length}</span>
                                 </div>
-                                {/* Tâches du bloc */}
+
+                                {/* Barres Gantt verticales */}
                                 {blockTasks.length > 0 ? (
-                                    <div className="px-3 pb-3 space-y-2">
+                                    <div className="px-3 pb-3 space-y-1.5">
                                         {blockTasks.map(gt => {
                                             const cfg = statusConfig[gt.task.statut] || statusConfig["todo"];
                                             const sD = parseDate(gt.task.dateDebut), eD = parseDate(gt.task.dateFin);
                                             const sel = selectedTask?.taskId === gt.taskId;
+
+                                            // Calcul position de la barre dans le bloc
+                                            let barLeftPct = 0, barWidthPct = 100;
+                                            if (sD && eD && block.totalDays > 0) {
+                                                const barStart = Math.max(block.startDate.getTime(), sD.getTime());
+                                                const barEnd = Math.min(block.endDate.getTime(), eD.getTime());
+                                                const offsetMs = barStart - block.startDate.getTime();
+                                                const spanMs = barEnd - barStart;
+                                                barLeftPct = Math.max(0, (offsetMs / (block.totalDays * 86400000)) * 100);
+                                                barWidthPct = Math.max(8, ((spanMs + 86400000) / (block.totalDays * 86400000)) * 100);
+                                            } else if (sD) {
+                                                barLeftPct = 0; barWidthPct = 50;
+                                            } else if (eD) {
+                                                barLeftPct = 50; barWidthPct = 50;
+                                            }
+
                                             return (
                                                 <button key={gt.taskId} onClick={() => setSelectedTask(sel ? null : gt)}
-                                                    className={`w-full rounded-xl p-2.5 border-2 text-left transition-all active:scale-[0.98] ${sel ? `${cfg.bg} ${cfg.border}` : "bg-white border-slate-100"}`}>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                                                        <span className="text-[11px] font-black text-slate-800 truncate flex-1">{gt.task.designation}</span>
-                                                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>
+                                                    className={`w-full rounded-xl transition-all active:scale-[0.98] ${sel ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
+                                                    {/* Nom de la tâche */}
+                                                    <div className="flex items-center gap-1.5 mb-0.5 px-1">
+                                                        <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
+                                                        <span className="text-[10px] font-bold text-slate-700 truncate">{gt.task.designation}</span>
+                                                        <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.text} shrink-0`}>{cfg.label}</span>
+                                                        <span className="text-[8px] text-slate-400 font-semibold ml-auto shrink-0">📁 {gt.projectName}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[9px] text-slate-400 font-semibold">
-                                                        <span>📁 {gt.projectName}</span>
-                                                        {sD && <span>{fmtShort(sD)}</span>}
-                                                        {sD && eD && <span>→</span>}
-                                                        {eD && <span>{fmtShort(eD)}</span>}
+                                                    {/* Barre Gantt */}
+                                                    <div className="w-full h-7 bg-slate-100 rounded-lg relative overflow-hidden">
+                                                        <div className={`absolute inset-y-0.5 rounded-md ${cfg.bar} shadow-sm flex items-center`}
+                                                            style={{ left: `${barLeftPct}%`, width: `${barWidthPct}%`, opacity: gt.task.statut === "termine" ? 0.7 : 1 }}>
+                                                            {barWidthPct > 20 && (
+                                                                <span className="text-[8px] font-bold text-white px-1.5 truncate leading-5">
+                                                                    {sD ? fmtShort(sD) : "?"} → {eD ? fmtShort(eD) : "?"}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {/* Marqueur aujourd'hui */}
+                                                        {isCurrent && (() => {
+                                                            const todayMs = new Date().getTime();
+                                                            const blockMs = todayMs - block.startDate.getTime();
+                                                            const todayPct = Math.max(0, Math.min(100, (blockMs / (block.totalDays * 86400000)) * 100));
+                                                            return <div className="absolute top-0 bottom-0 w-0.5 bg-primary-yellow/80 z-10" style={{ left: `${todayPct}%` }} />;
+                                                        })()}
                                                     </div>
                                                 </button>
                                             );
@@ -415,7 +359,7 @@ export default function GanttChart({ projects }: GanttChartProps) {
                 </div>
             )}
 
-            {/* ── Détail complet tâche ── */}
+            {/* Détail complet */}
             {selectedTask && <TaskDetail ganttTask={selectedTask} onClose={() => setSelectedTask(null)} />}
         </div>
     );
