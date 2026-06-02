@@ -117,8 +117,14 @@ function TaskCard({ ganttTask, onSelect, isSelected }: { ganttTask: GanttTask; o
 }
 
 // ─── Détail complet tâche ─────────────────────────────────
-function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () => void }) {
-    const { task, projectName } = ganttTask;
+function TaskDetail({ ganttTask, onClose, allProjects }: { ganttTask: GanttTask; onClose: () => void; allProjects: Project[] }) {
+    const { task, projectName, projectId } = ganttTask;
+    // Trouver le contact du responsable dans l'équipe du projet
+    const project = allProjects.find(p => p.id === projectId);
+    const responsableMember = project?.manager?.membres?.find((m: any) =>
+        task.responsable && (m.nom?.toLowerCase().includes(task.responsable.toLowerCase()) || m.prenom?.toLowerCase().includes(task.responsable.toLowerCase()) || `${m.prenom} ${m.nom}`.toLowerCase().includes(task.responsable.toLowerCase()))
+    );
+    const responsableContact = responsableMember?.contact || project?.manager?.contact || "";
     const cfg = statusConfig[task.statut] || statusConfig["todo"];
     const sD = parseDate(task.dateDebut), eD = parseDate(task.dateFin);
     const isLate = task.statut === "en-retard" && eD && eD < new Date();
@@ -130,7 +136,7 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
     const tRS = (task.budgetSortiesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
 
     return (
-        <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[70vh] flex flex-col">
+        <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-3 h-3 rounded-full shrink-0 ${cfg.dot}`} />
@@ -162,8 +168,10 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
                 )}
                 {/* Description - toujours affiché */}
                 <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description || "—"}</p></div>
-                {/* Responsable - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "—"}</p></div>
+                {/* Responsable + Contact - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "—"}</p>
+                    {responsableContact && <p className="text-[10px] text-slate-500 font-semibold mt-0.5">📞 {responsableContact}</p>}
+                </div>
                 {/* Objectifs - toujours affiché */}
                 <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs || "—"}</p></div>
                 {/* Budget détaillé - toujours affiché */}
@@ -563,7 +571,7 @@ export default function GanttChart({ projects }: GanttChartProps) {
             )}
 
             {/* Détail complet */}
-            {selectedTask && <TaskDetail ganttTask={selectedTask} onClose={() => setSelectedTask(null)} />}
+            {selectedTask && <TaskDetail ganttTask={selectedTask} onClose={() => setSelectedTask(null)} allProjects={projects} />}
         </div>
     );
 }
