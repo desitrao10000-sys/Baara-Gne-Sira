@@ -179,38 +179,73 @@ function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
 // ─── Page d'accueil Todo-Projet ──────────
 function TodoIntro({ totalTasks, totalProjects, onEnter }: { totalTasks: number; totalProjects: number; onEnter: () => void }) {
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 slide-in">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-violet-600 shadow-xl flex items-center justify-center mb-6">
-                <ListChecks size={44} className="text-white" />
-            </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-1">Todo-Projet</h1>
-            <p className="text-[12px] font-bold text-slate-400 mb-6">{totalTasks} tâche{totalTasks > 1 ? "s" : ""} • {totalProjects} projet{totalProjects > 1 ? "s" : ""}</p>
+        <div className="flex-1 overflow-y-auto slide-in" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="flex flex-col items-center p-5 pb-6 min-h-full">
+                {/* En-tête avec fond gradient */}
+                <div className="w-full rounded-3xl bg-gradient-to-br from-[#1e3a8a] to-purple-700 p-6 mb-5 shadow-xl text-center shine-effect">
+                    <div className="w-16 h-16 rounded-2xl bg-white/20 mx-auto flex items-center justify-center mb-3">
+                        <ListChecks size={34} className="text-primary-yellow" />
+                    </div>
+                    <h1 className="text-[22px] font-black text-white mb-1 uppercase tracking-wide">Todo-Projet</h1>
+                    <p className="text-[13px] font-bold text-primary-yellow">{totalTasks} tâche{totalTasks > 1 ? "s" : ""} • {totalProjects} projet{totalProjects > 1 ? "s" : ""}</p>
+                </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-5 max-w-md w-full mb-6">
-                <h2 className="text-[13px] font-black text-purple-700 mb-3">📌 Qu'est-ce que le Todo-Projet ?</h2>
-                <p className="text-[11px] text-slate-700 leading-relaxed mb-3">
-                    Le <span className="font-black text-purple-700">Todo-Projet</span> est votre tableau de bord centralisé pour suivre toutes les tâches de vos projets. Il offre une vue d'ensemble claire avec une <span className="font-bold">synchronisation en temps réel</span> vers le projet et le diagramme de Gantt.
-                </p>
-                <h3 className="text-[11px] font-black text-slate-800 mb-2">🎯 Pourquoi c'est important ?</h3>
-                <p className="text-[11px] text-slate-700 leading-relaxed mb-3">
-                    Il vous permet de piloter l'ensemble de vos activités sans naviguer entre les projets. Les tâches en retard remontent <span className="font-bold text-red-600">automatiquement en priorité</span> pour une action rapide.
-                </p>
-                <h3 className="text-[11px] font-black text-slate-800 mb-2">🔧 Comment ça marche ?</h3>
-                <ul className="text-[11px] text-slate-700 leading-relaxed space-y-1 list-none">
-                    <li>🔵 <span className="font-bold text-blue-600">À faire</span> — tâches planifiées</li>
-                    <li>🟡 <span className="font-bold text-yellow-600">En cours</span> — tâches démarrées</li>
-                    <li>🔴 <span className="font-bold text-red-600">En retard</span> — délai dépassé (remontées en haut)</li>
-                    <li>🟢 <span className="font-bold text-green-600">Terminé</span> — tâches achevées</li>
-                </ul>
-                <p className="text-[11px] text-slate-600 leading-relaxed mt-3">
-                    📁 Filtrez par <span className="font-bold">projet</span>, 👤 par <span className="font-bold">responsable</span> ou 📅 par <span className="font-bold">période</span>. Cliquez sur une tâche pour voir et modifier tous ses détails.
-                </p>
-            </div>
+                {/* Carte explication */}
+                <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-5 w-full mb-4">
+                    <h2 className="text-[15px] font-black text-[#1e3a8a] mb-3 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-[14px]">📌</span>
+                        Qu'est-ce que le Todo-Projet ?
+                    </h2>
+                    <p className="text-[13px] text-slate-700 leading-relaxed mb-4">
+                        Le <span className="font-black text-[#1e3a8a]">Todo-Projet</span> est votre tableau de bord centralisé pour suivre toutes les tâches de vos projets. Il offre une <span className="font-bold text-purple-700">synchronisation en temps réel</span> vers le projet et le Gantt.
+                    </p>
 
-            <button onClick={onEnter}
-                className="w-full max-w-md py-4 bg-gradient-to-r from-purple-700 to-violet-600 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-transform text-[14px]">
-                Accéder au Todo-Projet <ArrowRight size={18} />
-            </button>
+                    <h3 className="text-[13px] font-black text-slate-800 mb-2 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-yellow-100 flex items-center justify-center text-[12px]">🎯</span>
+                        Pourquoi c'est important ?
+                    </h3>
+                    <p className="text-[13px] text-slate-700 leading-relaxed mb-4">
+                        Pilotez toutes vos activités sans naviguer entre projets. Les retards remontent <span className="font-bold text-red-600">automatiquement en priorité</span>.
+                    </p>
+
+                    <h3 className="text-[13px] font-black text-slate-800 mb-2 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-[12px]">🔧</span>
+                        Comment ça marche ?
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">🔵</span>
+                            <span className="text-[12px] font-black text-blue-700">À faire</span>
+                            <span className="text-[10px] text-blue-500 block">Planifiées</span>
+                        </div>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">🟡</span>
+                            <span className="text-[12px] font-black text-yellow-700">En cours</span>
+                            <span className="text-[10px] text-yellow-500 block">Démarrées</span>
+                        </div>
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">🔴</span>
+                            <span className="text-[12px] font-black text-red-700">En retard</span>
+                            <span className="text-[10px] text-red-500 block">Priorité haute</span>
+                        </div>
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 text-center">
+                            <span className="text-[18px] block mb-1">🟢</span>
+                            <span className="text-[12px] font-black text-green-700">Terminé</span>
+                            <span className="text-[10px] text-green-500 block">Achevées</span>
+                        </div>
+                    </div>
+
+                    <p className="text-[12px] text-slate-600 leading-relaxed">
+                        📁 Filtrez par <span className="font-bold">projet</span>, 👤 par <span className="font-bold">responsable</span> ou 📅 par <span className="font-bold">période</span>. Cliquez sur une tâche pour voir tous ses détails.
+                    </p>
+                </div>
+
+                {/* Bouton d'accès */}
+                <button onClick={onEnter}
+                    className="w-full py-4 bg-gradient-to-r from-[#1e3a8a] to-purple-700 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 active:scale-95 transition-transform text-[15px]">
+                    Accéder au Todo-Projet <ArrowRight size={20} className="text-primary-yellow" />
+                </button>
+            </div>
         </div>
     );
 }
