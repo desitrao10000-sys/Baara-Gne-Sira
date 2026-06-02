@@ -188,9 +188,11 @@ export default function GanttChart({ projects }: GanttChartProps) {
     const grouped = useMemo(() => { const m = new Map<string, GanttTask[]>(); for (const t of filtered) { if (!m.has(t.projectId)) m.set(t.projectId, []); m.get(t.projectId)!.push(t); } return m; }, [filtered]);
     const stats = useMemo(() => { const s = { todo: 0, "en-cours": 0, "en-retard": 0, termine: 0, total: allTasks.length }; for (const t of allTasks) s[t.task.statut]++; return s; }, [allTasks]);
 
-    // Plage de dates
+    // Plage de dates — limitée pour éviter le gel
     const { dateStart, dateEnd } = useMemo(() => {
-        if (!filtered.length) { const n = new Date(); return { dateStart: new Date(n.getFullYear(), n.getMonth(), 1), dateEnd: new Date(n.getFullYear(), n.getMonth() + 2, 0) }; }
+        const now = new Date();
+        if (!filtered.length) { return { dateStart: new Date(now.getFullYear(), now.getMonth(), 1), dateEnd: new Date(now.getFullYear(), now.getMonth() + 2, 0) }; }
+
         let mn = Infinity, mx = -Infinity;
         for (const t of filtered) {
             const s = parseDate(t.task.dateDebut), e = parseDate(t.task.dateFin);
@@ -198,9 +200,26 @@ export default function GanttChart({ projects }: GanttChartProps) {
             if (s && !e) mx = Math.max(mx, s.getTime() + 30 * 86400000);
             if (!s && e) mn = Math.min(mn, e.getTime() - 30 * 86400000);
         }
-        if (mn === Infinity) mn = Date.now(); if (mx === -Infinity) mx = Date.now() + 60 * 86400000;
-        const s = new Date(mn), e = new Date(mx);
-        if (zoom === "mois") { s.setDate(1); e.setMonth(e.getMonth() + 1); e.setDate(0); }
+        if (mn === Infinity) mn = now.getTime(); if (mx === -Infinity) mx = now.getTime() + 60 * 86400000;
+
+        let s = new Date(mn), e = new Date(mx);
+
+        // Limiter la plage selon le zoom pour éviter trop de blocs
+        if (zoom === "jour") {
+            // Max 31 jours autour de maintenant
+            const center = new Date(now);
+            s = new Date(center.getFullYear(), center.getMonth(), center.getDate() - 15);
+            e = new Date(center.getFullYear(), center.getMonth(), center.getDate() + 15);
+        } else if (zoom === "semaine") {
+            // Max 3 mois
+            const center = new Date(now);
+            s = new Date(center.getFullYear(), center.getMonth() - 1, 1);
+            e = new Date(center.getFullYear(), center.getMonth() + 2, 0);
+        } else {
+            // mois : ajuster au début/fin du mois
+            s.setDate(1); e.setMonth(e.getMonth() + 1); e.setDate(0);
+        }
+
         return { dateStart: s, dateEnd: e };
     }, [filtered, zoom]);
 
