@@ -136,7 +136,7 @@ function TaskDetail({ ganttTask, onClose, allProjects }: { ganttTask: GanttTask;
     const tRS = (task.budgetSortiesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
 
     return (
-        <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[85vh] flex flex-col">
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl flex flex-col" style={{ maxHeight: "85vh" }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-3 h-3 rounded-full shrink-0 ${cfg.dot}`} />
