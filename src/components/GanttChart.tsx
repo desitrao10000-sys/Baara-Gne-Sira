@@ -28,9 +28,13 @@ interface TimeBlock { label: string; shortLabel: string; startDate: Date; endDat
 
 function getTimeBlocks(start: Date, end: Date, zoom: ZoomLevel): TimeBlock[] {
     const blocks: TimeBlock[] = [];
-    const cur = new Date(start);
-    while (cur <= end) {
-        if (zoom === "mois") {
+    const endMs = end.getTime();
+    let safety = 0;
+    const MAX_BLOCKS = 100;
+
+    if (zoom === "mois") {
+        const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+        while (cur.getTime() <= endMs && safety++ < MAX_BLOCKS) {
             const y = cur.getFullYear(), m = cur.getMonth();
             const monthName = cur.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
             const b1s = new Date(y, m, 1), b1e = new Date(y, m, 10);
@@ -40,14 +44,22 @@ function getTimeBlocks(start: Date, end: Date, zoom: ZoomLevel): TimeBlock[] {
             const b3s = new Date(y, m, 21), b3e = new Date(y, m + 1, 0);
             blocks.push({ label: `${monthName} — Fin (21-31)`, shortLabel: "21-31", startDate: b3s, endDate: b3e, totalDays: daysBetween(b3s, b3e) + 1 });
             cur.setMonth(cur.getMonth() + 1);
-        } else if (zoom === "semaine") {
+        }
+    } else if (zoom === "semaine") {
+        // Trouver le lundi de la semaine de départ
+        const cur = new Date(start);
+        const dow = cur.getDay();
+        cur.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1));
+        while (cur.getTime() <= endMs && safety++ < MAX_BLOCKS) {
             const ws = new Date(cur);
-            const dow = cur.getDay();
-            ws.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1));
-            const we = new Date(ws); we.setDate(ws.getDate() + 6);
+            const we = new Date(cur); we.setDate(we.getDate() + 6);
             blocks.push({ label: `${fmtShort(ws)} → ${fmtShort(we)}`, shortLabel: `${ws.getDate()}-${we.getDate()}`, startDate: ws, endDate: we, totalDays: 7 });
-            cur.setDate(we.getDate() + 1);
-        } else {
+            cur.setDate(cur.getDate() + 7);
+        }
+    } else {
+        // zoom jour
+        const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        while (cur.getTime() <= endMs && safety++ < MAX_BLOCKS) {
             blocks.push({ label: fmtFull(cur), shortLabel: `${cur.getDate()}`, startDate: new Date(cur), endDate: new Date(cur), totalDays: 1 });
             cur.setDate(cur.getDate() + 1);
         }
@@ -224,7 +236,26 @@ export default function GanttChart({ projects }: GanttChartProps) {
     }, [filtered, zoom]);
 
     const blocks = useMemo(() => getTimeBlocks(dateStart, dateEnd, zoom), [dateStart, dateEnd, zoom]);
-    const sortedBlocks = sortOrder === "desc" ? [...blocks].reverse() : blocks;
+    const sortedBlocks = useMemo(() => sortOrder === "desc" ? [...blocks].reverse() : blocks, [blocks, sortOrder]);
+
+    // Pré-calculer les tâches par bloc + position today (évite recalcul dans le render)
+    const blockData = useMemo(() => {
+        const nowMs = Date.now();
+        return sortedBlocks.map(block => {
+            const bTasks: GanttTask[] = [];
+            for (const [, tasks] of grouped) {
+                for (const gt of tasks) {
+                    if (taskInBlock(gt.task, block)) bTasks.push(gt);
+                }
+            }
+            const isCurrent = nowMs >= block.startDate.getTime() && nowMs <= block.endDate.getTime();
+            let todayPct = 0;
+            if (isCurrent && block.totalDays > 0) {
+                todayPct = Math.max(0, Math.min(100, ((nowMs - block.startDate.getTime()) / (block.totalDays * 86400000)) * 100));
+            }
+            return { block, tasks: bTasks, isCurrent, todayPct };
+        });
+    }, [sortedBlocks, grouped]);
 
     const toggleProject = (pid: string) => { setCollapsedProjects(prev => { const n = new Set(prev); if (n.has(pid)) n.delete(pid); else n.add(pid); return n; }); };
 
@@ -300,54 +331,41 @@ export default function GanttChart({ projects }: GanttChartProps) {
             {/* ═══ MODE TIMELINE VERTICAL AVEC BARRES ═══ */}
             {viewMode === "timeline" && (
                 <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-                    {sortedBlocks.map((block, bi) => {
-                        const blockTasks: GanttTask[] = [];
-                        for (const [, tasks] of grouped) { for (const gt of tasks) { if (taskInBlock(gt.task, block)) blockTasks.push(gt); } }
-                        const isCurrent = new Date() >= block.startDate && new Date() <= block.endDate;
-
+                    {blockData.map((bd, bi) => {
+                        const { block, tasks: bTasks, isCurrent, todayPct } = bd;
                         return (
                             <div key={bi} className={`border-b-2 ${isCurrent ? "border-primary-yellow/50 bg-amber-50/20" : "border-slate-100"}`}>
-                                {/* En-tête période */}
                                 <div className={`sticky top-0 z-10 px-3 py-2 flex items-center gap-2 ${isCurrent ? "bg-amber-50" : "bg-slate-50"}`}>
                                     <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCurrent ? "bg-primary-yellow" : "bg-slate-300"}`} />
                                     <span className={`text-[11px] font-black ${isCurrent ? "text-primary-yellow" : "text-slate-500"}`}>{block.label}</span>
-                                    <span className="text-[9px] font-bold text-slate-300 ml-auto">{blockTasks.length}</span>
+                                    <span className="text-[9px] font-bold text-slate-300 ml-auto">{bTasks.length}</span>
                                 </div>
 
-                                {/* Barres Gantt verticales */}
-                                {blockTasks.length > 0 ? (
+                                {bTasks.length > 0 ? (
                                     <div className="px-3 pb-3 space-y-1.5">
-                                        {blockTasks.map(gt => {
+                                        {bTasks.map(gt => {
                                             const cfg = statusConfig[gt.task.statut] || statusConfig["todo"];
                                             const sD = parseDate(gt.task.dateDebut), eD = parseDate(gt.task.dateFin);
                                             const sel = selectedTask?.taskId === gt.taskId;
 
-                                            // Calcul position de la barre dans le bloc
                                             let barLeftPct = 0, barWidthPct = 100;
                                             if (sD && eD && block.totalDays > 0) {
-                                                const barStart = Math.max(block.startDate.getTime(), sD.getTime());
-                                                const barEnd = Math.min(block.endDate.getTime(), eD.getTime());
-                                                const offsetMs = barStart - block.startDate.getTime();
-                                                const spanMs = barEnd - barStart;
-                                                barLeftPct = Math.max(0, (offsetMs / (block.totalDays * 86400000)) * 100);
-                                                barWidthPct = Math.max(8, ((spanMs + 86400000) / (block.totalDays * 86400000)) * 100);
-                                            } else if (sD) {
-                                                barLeftPct = 0; barWidthPct = 50;
-                                            } else if (eD) {
-                                                barLeftPct = 50; barWidthPct = 50;
-                                            }
+                                                const bSt = Math.max(block.startDate.getTime(), sD.getTime());
+                                                const bEn = Math.min(block.endDate.getTime(), eD.getTime());
+                                                barLeftPct = Math.max(0, ((bSt - block.startDate.getTime()) / (block.totalDays * 86400000)) * 100);
+                                                barWidthPct = Math.max(8, (((bEn - bSt) + 86400000) / (block.totalDays * 86400000)) * 100);
+                                            } else if (sD) { barLeftPct = 0; barWidthPct = 50; }
+                                            else if (eD) { barLeftPct = 50; barWidthPct = 50; }
 
                                             return (
                                                 <button key={gt.taskId} onClick={() => setSelectedTask(sel ? null : gt)}
                                                     className={`w-full rounded-xl transition-all active:scale-[0.98] ${sel ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
-                                                    {/* Nom de la tâche */}
                                                     <div className="flex items-center gap-1.5 mb-0.5 px-1">
                                                         <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
                                                         <span className="text-[10px] font-bold text-slate-700 truncate">{gt.task.designation}</span>
                                                         <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.text} shrink-0`}>{cfg.label}</span>
                                                         <span className="text-[8px] text-slate-400 font-semibold ml-auto shrink-0">📁 {gt.projectName}</span>
                                                     </div>
-                                                    {/* Barre Gantt */}
                                                     <div className="w-full h-7 bg-slate-100 rounded-lg relative overflow-hidden">
                                                         <div className={`absolute inset-y-0.5 rounded-md ${cfg.bar} shadow-sm flex items-center`}
                                                             style={{ left: `${barLeftPct}%`, width: `${barWidthPct}%`, opacity: gt.task.statut === "termine" ? 0.7 : 1 }}>
@@ -357,13 +375,9 @@ export default function GanttChart({ projects }: GanttChartProps) {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        {/* Marqueur aujourd'hui */}
-                                                        {isCurrent && (() => {
-                                                            const todayMs = new Date().getTime();
-                                                            const blockMs = todayMs - block.startDate.getTime();
-                                                            const todayPct = Math.max(0, Math.min(100, (blockMs / (block.totalDays * 86400000)) * 100));
-                                                            return <div className="absolute top-0 bottom-0 w-0.5 bg-primary-yellow/80 z-10" style={{ left: `${todayPct}%` }} />;
-                                                        })()}
+                                                        {isCurrent && todayPct > 0 && (
+                                                            <div className="absolute top-0 bottom-0 w-0.5 bg-primary-yellow/80 z-10" style={{ left: `${todayPct}%` }} />
+                                                        )}
                                                     </div>
                                                 </button>
                                             );
