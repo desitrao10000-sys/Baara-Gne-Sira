@@ -82,15 +82,17 @@ function TaskDetailPanel({ ft, onClose, onSave }: {
             </div>
 
             <div className="overflow-y-auto px-4 py-2 space-y-2.5 flex-1" style={{ WebkitOverflowScrolling: "touch" }}>
-                {/* Statut */}
+                {/* Statut cliquable pour reclassement */}
                 <div className="flex flex-wrap items-center gap-1.5">
                     {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
-                        <span key={k} className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${effectiveStatut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-300 border-slate-100"}`}>
+                        <button key={k} type="button" onClick={() => set({ statut: k as ProjectTask["statut"], dateDebut: "", dateFin: "" })} title={`Classer : ${c.label}`}
+                            className={`text-[9px] font-bold px-2.5 py-1 rounded-full border transition-all active:scale-95 ${effectiveStatut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200 hover:border-slate-400"}`}>
                             {c.emoji} {c.label}
-                        </span>
+                        </button>
                     ))}
                     <span className="text-[9px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full">📁 {projectName}</span>
                 </div>
+                <p className="text-[8px] text-slate-400 italic mt-0.5">💡 Cliquez un statut pour reclasser. Modifiez les dates pour classement auto.</p>
 
                 {/* Dates */}
                 <div className="bg-slate-50 rounded-xl p-2.5">
@@ -242,9 +244,21 @@ function TodoIntro({ totalTasks, totalProjects, onEnter }: { totalTasks: number;
                             <span className="text-[12px] font-black text-green-700">Terminé</span>
                         </div>
                     </div>
-                    <p className="text-[12px] text-slate-600 leading-relaxed">
+                    <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
                         📁 Filtrez par <span className="font-bold">projet</span>, 👤 par <span className="font-bold">responsable</span> ou 📅 par <span className="font-bold">période</span>. Cliquez sur une tâche pour voir tous ses détails.
                     </p>
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-3">
+                        <h3 className="text-[12px] font-black text-purple-800 mb-1.5">🎯 Filtrer par statut</h3>
+                        <p className="text-[11px] text-purple-700 leading-relaxed">
+                            Filtrez les tâches par statut en un clic : <span className="font-bold text-yellow-700">⏳ En cours</span>, <span className="font-bold text-blue-700">📋 À faire</span>, <span className="font-bold text-red-700">⚠️ En retard</span> ou <span className="font-bold text-green-700">✅ Terminé</span>. La barre de filtres vous montre le nombre de tâches dans chaque catégorie.
+                        </p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <h3 className="text-[12px] font-black text-amber-800 mb-1.5">✏️ Reclassement des tâches</h3>
+                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                            En cliquant sur une tâche, <span className="font-bold">modifiez les dates</span> pour la reclasser automatiquement, ou cliquez directement sur un statut en haut du panneau pour la reclasser manuellement. Le statut se met à jour en temps réel.
+                        </p>
+                    </div>
                 </div>
                 <button onClick={onEnter}
                     className="w-full py-4 bg-gradient-to-r from-[#1e3a8a] to-purple-700 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform text-[15px]">
