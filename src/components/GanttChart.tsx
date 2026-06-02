@@ -20,7 +20,7 @@ const statusConfig: Record<string, { bg: string; bar: string; text: string; dot:
 
 function parseDate(d: string): Date | null { if (!d) return null; const p = new Date(d); return isNaN(p.getTime()) ? null : p; }
 function daysBetween(a: Date, b: Date): number { return Math.ceil((b.getTime() - a.getTime()) / 86400000); }
-function fmtShort(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }); }
+function fmtShort(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); }
 function fmtFull(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); }
 
 type ZoomLevel = "mois" | "semaine" | "jour";
@@ -160,23 +160,80 @@ function TaskDetail({ ganttTask, onClose }: { ganttTask: GanttTask; onClose: () 
                         )}
                     </div>
                 )}
-                {task.description && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description}</p></div>)}
-                {task.responsable && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">👤 {task.responsable}</p></div>)}
-                {task.objectifs && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs}</p></div>)}
-                {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Budget</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-green-50 rounded-xl p-2"><span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span><span className="text-[12px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-red-50 rounded-xl p-2"><span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span><span className="text-[12px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-emerald-50 rounded-xl p-2"><span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span><span className="text-[12px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-orange-50 rounded-xl p-2"><span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span><span className="text-[12px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span></div>
+                {/* Description - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description || "—"}</p></div>
+                {/* Responsable - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "—"}</p></div>
+                {/* Objectifs - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs || "—"}</p></div>
+                {/* Budget détaillé - toujours affiché */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💰 Gestion financière</h4>
+                    {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) ? (
+                        <div className="space-y-1.5">
+                            {(task.budgetEntreesPrev || []).length > 0 && (
+                                <div className="bg-green-50 rounded-xl p-2 border border-green-200">
+                                    <div className="text-[10px] font-black text-green-700 mb-1">💵 Entrées prévues — Total : {tPE.toLocaleString("fr-FR")} FCFA</div>
+                                    {(task.budgetEntreesPrev || []).map((b: any, i: number) => (
+                                        <div key={i} className="flex justify-between text-[11px] py-0.5 border-b border-green-100 last:border-0">
+                                            <span className="text-slate-700 font-semibold">{b.designation || "—"}</span>
+                                            <span className="text-green-700 font-black">{(Number(b.montant) || 0).toLocaleString("fr-FR")} FCFA</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {(task.budgetSortiesPrev || []).length > 0 && (
+                                <div className="bg-red-50 rounded-xl p-2 border border-red-200">
+                                    <div className="text-[10px] font-black text-red-700 mb-1">📤 Sorties prévues — Total : {tPS.toLocaleString("fr-FR")} FCFA</div>
+                                    {(task.budgetSortiesPrev || []).map((b: any, i: number) => (
+                                        <div key={i} className="flex justify-between text-[11px] py-0.5 border-b border-red-100 last:border-0">
+                                            <span className="text-slate-700 font-semibold">{b.designation || "—"}</span>
+                                            <span className="text-red-700 font-black">{(Number(b.montant) || 0).toLocaleString("fr-FR")} FCFA</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {(task.budgetEntreesReel || []).length > 0 && (
+                                <div className="bg-emerald-50 rounded-xl p-2 border border-emerald-200">
+                                    <div className="text-[10px] font-black text-emerald-700 mb-1">✅ Entrées réelles — Total : {tRE.toLocaleString("fr-FR")} FCFA</div>
+                                    {(task.budgetEntreesReel || []).map((b: any, i: number) => (
+                                        <div key={i} className="flex justify-between text-[11px] py-0.5 border-b border-emerald-100 last:border-0">
+                                            <span className="text-slate-700 font-semibold">{b.designation || "—"}</span>
+                                            <span className="text-emerald-700 font-black">{(Number(b.montant) || 0).toLocaleString("fr-FR")} FCFA</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {(task.budgetSortiesReel || []).length > 0 && (
+                                <div className="bg-orange-50 rounded-xl p-2 border border-orange-200">
+                                    <div className="text-[10px] font-black text-orange-700 mb-1">💸 Sorties réelles — Total : {tRS.toLocaleString("fr-FR")} FCFA</div>
+                                    {(task.budgetSortiesReel || []).map((b: any, i: number) => (
+                                        <div key={i} className="flex justify-between text-[11px] py-0.5 border-b border-orange-100 last:border-0">
+                                            <span className="text-slate-700 font-semibold">{b.designation || "—"}</span>
+                                            <span className="text-orange-700 font-black">{(Number(b.montant) || 0).toLocaleString("fr-FR")} FCFA</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="bg-slate-100 rounded-xl p-2 flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-800">Solde prévu</span>
+                                <span className={`text-[12px] font-black ${(tPE - tPS) >= 0 ? "text-green-700" : "text-red-700"}`}>{(tPE - tPS).toLocaleString("fr-FR")} FCFA</span>
+                            </div>
+                            <div className="bg-slate-100 rounded-xl p-2 flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-800">Solde réel</span>
+                                <span className={`text-[12px] font-black ${(tRE - tRS) >= 0 ? "text-green-700" : "text-red-700"}`}>{(tRE - tRS).toLocaleString("fr-FR")} FCFA</span>
+                            </div>
                         </div>
-                    </div>
-                )}
-                {task.risques && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.risques}</p></div>)}
-                {task.suggestionResolution && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution}</p></div>)}
-                {task.commentaires && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires}</p></div>)}
+                    ) : (
+                        <p className="text-[11px] text-slate-400 italic">Aucun budget défini</p>
+                    )}
+                </div>
+                {/* Risques - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">⚡ Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.risques || "—"}</p></div>
+                {/* Suggestion - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💡 Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution || "—"}</p></div>
+                {/* Commentaires - toujours affiché */}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💬 Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires || "—"}</p></div>
             </div>
         </div>
     );
