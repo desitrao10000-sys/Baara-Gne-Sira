@@ -39,31 +39,55 @@ function EditField({ label, emoji, value, onChange, bg = "bg-slate-50", rows = 2
     );
 }
 
-// ─── Détail complet tâche (tous champs éditables) ──────────
-function TaskDetailPanel({ ft, onClose, onUpdate }: {
-    ft: FlatTask; onClose: () => void;
-    onUpdate: (ft: FlatTask, changes: Partial<ProjectTask>) => void;
-}) {
-    const { task, projectName } = ft;
-    const cfg = statusCfg[task.statut] || statusCfg["todo"];
-    const sD = parseDate(task.dateDebut), eD = parseDate(task.dateFin);
+// ─── Calcul du statut effectif basé sur les dates ──────────
+function getEffectiveStatus(task: ProjectTask): ProjectTask["statut"] {
+    if (task.statut === "termine") return "termine";
+    const fin = parseDate(task.dateFin);
+    const debut = parseDate(task.dateDebut);
     const now = new Date(); now.setHours(0, 0, 0, 0);
-    const isLate = task.statut === "en-retard" || (eD && eD < now && task.statut !== "termine");
+    // Date fin passée → en retard
+    if (fin && fin < now) return "en-retard";
+    // Date début passée ou aujourd'hui et date fin future → en cours
+    if (debut && debut <= now && (!fin || fin >= now)) return "en-cours";
+    // Date début future → à faire
+    return "todo";
+}
+
+// ─── Détail complet tâche (édition locale + Valider/Annuler) ──────────
+function TaskDetailPanel({ ft, onClose, onSave }: {
+    ft: FlatTask; onClose: () => void;
+    onSave: (ft: FlatTask, updatedTask: ProjectTask) => void;
+}) {
+    const { projectName } = ft;
+    // État local pour les modifications
+    const [local, setLocal] = useState<ProjectTask>({ ...ft.task });
+
+    const effectiveStatut = getEffectiveStatus(local);
+    const cfg = statusCfg[effectiveStatut] || statusCfg["todo"];
+    const sD = parseDate(local.dateDebut), eD = parseDate(local.dateFin);
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const isLate = effectiveStatut === "en-retard";
     const dL = isLate && eD ? daysBetween(eD, now) : 0;
     const dur = (sD && eD) ? daysBetween(sD, eD) + 1 : 0;
 
     const sum = (arr: any[] | undefined) => (arr || []).reduce((a: number, b: any) => a + (Number(b.montant) || 0), 0);
-    const tPE = sum(task.budgetEntreesPrev), tPS = sum(task.budgetSortiesPrev);
-    const tRE = sum(task.budgetEntreesReel), tRS = sum(task.budgetSortiesReel);
+    const tPE = sum(local.budgetEntreesPrev), tPS = sum(local.budgetSortiesPrev);
+    const tRE = sum(local.budgetEntreesReel), tRS = sum(local.budgetSortiesReel);
 
-    const upd = (changes: Partial<ProjectTask>) => onUpdate(ft, changes);
+    const set = (changes: Partial<ProjectTask>) => setLocal(prev => ({ ...prev, ...changes }));
+
+    const handleValidate = () => {
+        const toSave = { ...local, statut: getEffectiveStatus(local) };
+        onSave(ft, toSave);
+        onClose();
+    };
 
     return (
         <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[75vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${cfg.dot}`} />
-                    <input value={task.designation} onChange={e => upd({ designation: e.target.value })} title="Désignation" placeholder="Nom de la tâche"
+                    <input value={local.designation} onChange={e => set({ designation: e.target.value })} title="Désignation" placeholder="Nom de la tâche"
                         className="text-[15px] font-black text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-vibrant-blue focus:outline-none flex-1 min-w-0" />
                 </div>
                 <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full shrink-0" title="Fermer" aria-label="Fermer">
@@ -72,13 +96,12 @@ function TaskDetailPanel({ ft, onClose, onUpdate }: {
             </div>
 
             <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
-                {/* Statut + Projet */}
+                {/* Statut automatique + Projet */}
                 <div className="flex flex-wrap items-center gap-2">
                     {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
-                        <button key={k} onClick={() => upd({ statut: k as ProjectTask["statut"] })}
-                            className={`text-[10px] font-bold px-3 py-1 rounded-full border transition-all ${task.statut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200"}`}>
+                        <span key={k} className={`text-[10px] font-bold px-3 py-1 rounded-full border ${effectiveStatut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-300 border-slate-100"}`}>
                             {c.emoji} {c.label}
-                        </button>
+                        </span>
                     ))}
                     <span className="text-[10px] font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded-full">📁 {projectName}</span>
                 </div>
@@ -88,15 +111,15 @@ function TaskDetailPanel({ ft, onClose, onUpdate }: {
                     <div className="flex items-center gap-3 flex-wrap">
                         <div>
                             <label className="text-slate-800 block text-[10px] font-black mb-0.5">Date début</label>
-                            <input type="date" value={task.dateDebut || ""} onChange={e => upd({ dateDebut: e.target.value })}
-                                title="Date début" aria-label="Date début" placeholder="Début"
+                            <input type="date" value={local.dateDebut || ""} onChange={e => set({ dateDebut: e.target.value })}
+                                title="Date début" aria-label="Date début"
                                 className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
                         </div>
                         <span className="text-slate-300 text-lg">→</span>
                         <div>
                             <label className="text-slate-800 block text-[10px] font-black mb-0.5">Date fin</label>
-                            <input type="date" value={task.dateFin || ""} onChange={e => upd({ dateFin: e.target.value })}
-                                title="Date fin" aria-label="Date fin" placeholder="Fin"
+                            <input type="date" value={local.dateFin || ""} onChange={e => set({ dateFin: e.target.value })}
+                                title="Date fin" aria-label="Date fin"
                                 className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
                         </div>
                         {dur > 0 && (
@@ -116,16 +139,16 @@ function TaskDetailPanel({ ft, onClose, onUpdate }: {
                 {/* Responsable */}
                 <div>
                     <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">👤 Responsable</h4>
-                    <input value={task.responsable || ""} onChange={e => upd({ responsable: e.target.value })} placeholder="Nom du responsable" title="Responsable"
+                    <input value={local.responsable || ""} onChange={e => set({ responsable: e.target.value })} placeholder="Nom du responsable" title="Responsable"
                         className="w-full text-[12px] text-slate-700 font-bold border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30" />
                 </div>
 
                 {/* Champs éditables */}
-                <EditField label="Description" emoji="📝" value={task.description || ""} onChange={v => upd({ description: v })} rows={3} />
-                <EditField label="Objectifs" emoji="🎯" value={task.objectifs || ""} onChange={v => upd({ objectifs: v })} bg="bg-blue-50" rows={3} />
-                <EditField label="Risques" emoji="⚡" value={task.risques || ""} onChange={v => upd({ risques: v })} bg="bg-red-50" />
-                <EditField label="Suggestion de résolution" emoji="💡" value={task.suggestionResolution || ""} onChange={v => upd({ suggestionResolution: v })} bg="bg-yellow-50" />
-                <EditField label="Commentaires" emoji="💬" value={task.commentaires || ""} onChange={v => upd({ commentaires: v })} rows={3} />
+                <EditField label="Description" emoji="📝" value={local.description || ""} onChange={v => set({ description: v })} rows={3} />
+                <EditField label="Objectifs" emoji="🎯" value={local.objectifs || ""} onChange={v => set({ objectifs: v })} bg="bg-blue-50" rows={3} />
+                <EditField label="Risques" emoji="⚡" value={local.risques || ""} onChange={v => set({ risques: v })} bg="bg-red-50" />
+                <EditField label="Suggestion de résolution" emoji="💡" value={local.suggestionResolution || ""} onChange={v => set({ suggestionResolution: v })} bg="bg-yellow-50" />
+                <EditField label="Commentaires" emoji="💬" value={local.commentaires || ""} onChange={v => set({ commentaires: v })} rows={3} />
 
                 {/* Budget (lecture seule) */}
                 <div>
@@ -153,6 +176,18 @@ function TaskDetailPanel({ ft, onClose, onUpdate }: {
                         <p className="text-[12px] text-slate-400 italic">Aucun budget défini</p>
                     )}
                 </div>
+            </div>
+
+            {/* Boutons Valider / Annuler */}
+            <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50">
+                <button onClick={handleValidate}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-[#1e3a8a] to-purple-700 text-white rounded-xl font-extrabold text-[13px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+                    <CheckCircle2 size={16} /> Valider
+                </button>
+                <button onClick={onClose}
+                    className="flex-1 py-2.5 bg-white text-red-600 rounded-xl font-extrabold text-[13px] border-2 border-red-300 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <X size={16} /> Annuler
+                </button>
             </div>
         </div>
     );
@@ -245,7 +280,11 @@ function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSa
     const allTasks = useMemo<FlatTask[]>(() => {
         const list: FlatTask[] = [];
         for (const p of projects) {
-            if (p.tasks?.length) for (const t of p.tasks) list.push({ task: t, projectId: p.id, projectName: p.info.name });
+            if (p.tasks?.length) for (const t of p.tasks) {
+                // Calculer le statut effectif basé sur les dates
+                const effectiveStatut = getEffectiveStatus(t);
+                list.push({ task: { ...t, statut: effectiveStatut }, projectId: p.id, projectName: p.info.name });
+            }
         }
         return list;
     }, [projects]);
@@ -470,11 +509,9 @@ function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSa
             </div>
 
             {/* Détail tâche */}
-            {selectedTask && <TaskDetailPanel ft={selectedTask} onClose={() => setSelectedTask(null)} onUpdate={(ft, changes) => {
-                const updated = { ...ft.task, ...changes };
-                if (changes.dateDebut || changes.dateFin) updated.statut = getAutoStatus(updated);
-                updateTask(ft.projectId, updated);
-                setSelectedTask({ ...ft, task: updated });
+            {selectedTask && <TaskDetailPanel ft={selectedTask} onClose={() => setSelectedTask(null)} onSave={(ft: FlatTask, updatedTask: ProjectTask) => {
+                updateTask(ft.projectId, updatedTask);
+                setSelectedTask(null);
             }} />}
         </div>
     );
