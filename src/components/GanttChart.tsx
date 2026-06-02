@@ -167,13 +167,13 @@ function TaskDetail({ ganttTask, onClose, allProjects }: { ganttTask: GanttTask;
                     </div>
                 )}
                 {/* Description - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description || "—"}</p></div>
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4><p className="text-[11px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">{task.description || "—"}</p></div>
                 {/* Responsable + Contact - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "—"}</p>
-                    {responsableContact && <p className="text-[10px] text-slate-500 font-semibold mt-0.5">📞 {responsableContact}</p>}
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4><p className="text-[11px] text-slate-700 font-semibold break-words">{task.responsable || "—"}</p>
+                    {responsableContact && <p className="text-[10px] text-slate-500 font-semibold mt-0.5 break-words">📞 {responsableContact}</p>}
                 </div>
                 {/* Objectifs - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs || "—"}</p></div>
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">{task.objectifs || "—"}</p></div>
                 {/* Budget détaillé - toujours affiché */}
                 <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💰 Gestion financière</h4>
@@ -237,11 +237,11 @@ function TaskDetail({ ganttTask, onClose, allProjects }: { ganttTask: GanttTask;
                     )}
                 </div>
                 {/* Risques - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">⚡ Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.risques || "—"}</p></div>
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">⚡ Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">{task.risques || "—"}</p></div>
                 {/* Suggestion - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💡 Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution || "—"}</p></div>
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💡 Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">{task.suggestionResolution || "—"}</p></div>
                 {/* Commentaires - toujours affiché */}
-                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💬 Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires || "—"}</p></div>
+                <div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💬 Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">{task.commentaires || "—"}</p></div>
             </div>
         </div>
     );
