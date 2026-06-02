@@ -26,11 +26,23 @@ function daysBetween(a: Date, b: Date): number { return Math.ceil((b.getTime() -
 
 interface FlatTask { task: ProjectTask; projectId: string; projectName: string; }
 
-// ─── Détail complet tâche ──────────
-function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
+// ─── Champ éditable ──────────
+function EditField({ label, emoji, value, onChange, bg = "bg-slate-50", rows = 2 }: {
+    label: string; emoji: string; value: string; onChange: (v: string) => void; bg?: string; rows?: number;
+}) {
+    return (
+        <div>
+            <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">{emoji} {label}</h4>
+            <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
+                className={`w-full text-[12px] text-slate-700 leading-relaxed ${bg} rounded-xl p-2 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30 resize-none`} />
+        </div>
+    );
+}
+
+// ─── Détail complet tâche (tous champs éditables) ──────────
+function TaskDetailPanel({ ft, onClose, onUpdate }: {
     ft: FlatTask; onClose: () => void;
-    onDateChange: (ft: FlatTask, field: "dateDebut" | "dateFin", value: string) => void;
-    onStatusChange: (ft: FlatTask, statut: ProjectTask["statut"]) => void;
+    onUpdate: (ft: FlatTask, changes: Partial<ProjectTask>) => void;
 }) {
     const { task, projectName } = ft;
     const cfg = statusCfg[task.statut] || statusCfg["todo"];
@@ -40,19 +52,19 @@ function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
     const dL = isLate && eD ? daysBetween(eD, now) : 0;
     const dur = (sD && eD) ? daysBetween(sD, eD) + 1 : 0;
 
-    // Budgets - safe reduce
     const sum = (arr: any[] | undefined) => (arr || []).reduce((a: number, b: any) => a + (Number(b.montant) || 0), 0);
-    const tPE = sum(task.budgetEntreesPrev);
-    const tPS = sum(task.budgetSortiesPrev);
-    const tRE = sum(task.budgetEntreesReel);
-    const tRS = sum(task.budgetSortiesReel);
+    const tPE = sum(task.budgetEntreesPrev), tPS = sum(task.budgetSortiesPrev);
+    const tRE = sum(task.budgetEntreesReel), tRS = sum(task.budgetSortiesReel);
+
+    const upd = (changes: Partial<ProjectTask>) => onUpdate(ft, changes);
 
     return (
         <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[75vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${cfg.dot}`} />
-                    <h3 className="text-[15px] font-black text-slate-800 truncate">{task.designation}</h3>
+                    <input value={task.designation} onChange={e => upd({ designation: e.target.value })} title="Désignation" placeholder="Nom de la tâche"
+                        className="text-[15px] font-black text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-vibrant-blue focus:outline-none flex-1 min-w-0" />
                 </div>
                 <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full shrink-0" title="Fermer" aria-label="Fermer">
                     <X size={16} className="text-slate-500" />
@@ -62,114 +74,84 @@ function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
             <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
                 {/* Statut + Projet */}
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{cfg.emoji} {cfg.label}</span>
-                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">📁 {projectName}</span>
+                    {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
+                        <button key={k} onClick={() => upd({ statut: k as ProjectTask["statut"] })}
+                            className={`text-[10px] font-bold px-3 py-1 rounded-full border transition-all ${task.statut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200"}`}>
+                            {c.emoji} {c.label}
+                        </button>
+                    ))}
+                    <span className="text-[10px] font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded-full">📁 {projectName}</span>
                 </div>
 
                 {/* Dates modifiables */}
                 <div className="bg-slate-50 rounded-xl p-3">
                     <div className="flex items-center gap-3 flex-wrap">
                         <div>
-                            <label className="text-slate-400 block text-[9px] font-bold mb-0.5">Date début</label>
-                            <input type="date" value={task.dateDebut || ""} onChange={e => onDateChange(ft, "dateDebut", e.target.value)}
-                                title="Date début" aria-label="Date début"
+                            <label className="text-slate-800 block text-[10px] font-black mb-0.5">Date début</label>
+                            <input type="date" value={task.dateDebut || ""} onChange={e => upd({ dateDebut: e.target.value })}
+                                title="Date début" aria-label="Date début" placeholder="Début"
                                 className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
                         </div>
                         <span className="text-slate-300 text-lg">→</span>
                         <div>
-                            <label className="text-slate-400 block text-[9px] font-bold mb-0.5">Date fin</label>
-                            <input type="date" value={task.dateFin || ""} onChange={e => onDateChange(ft, "dateFin", e.target.value)}
-                                title="Date fin" aria-label="Date fin"
+                            <label className="text-slate-800 block text-[10px] font-black mb-0.5">Date fin</label>
+                            <input type="date" value={task.dateFin || ""} onChange={e => upd({ dateFin: e.target.value })}
+                                title="Date fin" aria-label="Date fin" placeholder="Fin"
                                 className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
                         </div>
                         {dur > 0 && (
                             <div className="ml-auto text-right">
-                                <span className="text-slate-400 block text-[9px] font-bold">Durée</span>
+                                <span className="text-slate-800 block text-[10px] font-black">Durée</span>
                                 <span className="text-vibrant-blue font-black text-[14px]">{dur}j</span>
                             </div>
                         )}
                     </div>
                     {isLate && dL > 0 && (
                         <div className="flex items-center gap-1 mt-2 text-red-600 bg-red-50 rounded-lg px-2 py-1">
-                            <AlertTriangle size={12} /><span className="text-[10px] font-bold">Retard : {dL} jour(s) dépassé(s)</span>
+                            <AlertTriangle size={12} /><span className="text-[11px] font-bold">Retard : {dL} jour(s) dépassé(s)</span>
                         </div>
                     )}
-                </div>
-
-                {/* Changer statut */}
-                <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Changer le statut</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
-                            <button key={k} onClick={() => onStatusChange(ft, k as ProjectTask["statut"])}
-                                className={`text-[9px] font-bold px-2.5 py-1 rounded-full border transition-all ${task.statut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200"}`}>
-                                {c.emoji} {c.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4>
-                    <p className="text-[11px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2">{task.description || "Aucune description"}</p>
                 </div>
 
                 {/* Responsable */}
                 <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4>
-                    <p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "Non assigné"}</p>
+                    <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">👤 Responsable</h4>
+                    <input value={task.responsable || ""} onChange={e => upd({ responsable: e.target.value })} placeholder="Nom du responsable" title="Responsable"
+                        className="w-full text-[12px] text-slate-700 font-bold border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30" />
                 </div>
 
-                {/* Objectifs */}
-                <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4>
-                    <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50 rounded-xl p-2">{task.objectifs || "Aucun objectif défini"}</p>
-                </div>
+                {/* Champs éditables */}
+                <EditField label="Description" emoji="📝" value={task.description || ""} onChange={v => upd({ description: v })} rows={3} />
+                <EditField label="Objectifs" emoji="🎯" value={task.objectifs || ""} onChange={v => upd({ objectifs: v })} bg="bg-blue-50" rows={3} />
+                <EditField label="Risques" emoji="⚡" value={task.risques || ""} onChange={v => upd({ risques: v })} bg="bg-red-50" />
+                <EditField label="Suggestion de résolution" emoji="💡" value={task.suggestionResolution || ""} onChange={v => upd({ suggestionResolution: v })} bg="bg-yellow-50" />
+                <EditField label="Commentaires" emoji="💬" value={task.commentaires || ""} onChange={v => upd({ commentaires: v })} rows={3} />
 
-                {/* Budget */}
+                {/* Budget (lecture seule) */}
                 <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💰 Budget</h4>
+                    <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">💰 Budget</h4>
                     {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) ? (
                         <div className="grid grid-cols-2 gap-2">
                             <div className="bg-green-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span>
-                                <span className="text-[12px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span>
+                                <span className="text-[10px] font-bold text-green-600 block">Entrées prévues</span>
+                                <span className="text-[13px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span>
                             </div>
                             <div className="bg-red-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span>
-                                <span className="text-[12px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span>
+                                <span className="text-[10px] font-bold text-red-600 block">Sorties prévues</span>
+                                <span className="text-[13px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span>
                             </div>
                             <div className="bg-emerald-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span>
-                                <span className="text-[12px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span>
+                                <span className="text-[10px] font-bold text-emerald-600 block">Entrées réelles</span>
+                                <span className="text-[13px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span>
                             </div>
                             <div className="bg-orange-50 rounded-xl p-2">
-                                <span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span>
-                                <span className="text-[12px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span>
+                                <span className="text-[10px] font-bold text-orange-600 block">Sorties réelles</span>
+                                <span className="text-[13px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span>
                             </div>
                         </div>
                     ) : (
-                        <p className="text-[11px] text-slate-400 italic">Aucun budget défini</p>
+                        <p className="text-[12px] text-slate-400 italic">Aucun budget défini</p>
                     )}
-                </div>
-
-                {/* Risques */}
-                <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">⚡ Risques</h4>
-                    <p className="text-[11px] text-slate-700 leading-relaxed bg-red-50 rounded-xl p-2">{task.risques || "Aucun risque identifié"}</p>
-                </div>
-
-                {/* Suggestion */}
-                <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💡 Suggestion de résolution</h4>
-                    <p className="text-[11px] text-slate-700 leading-relaxed bg-yellow-50 rounded-xl p-2">{task.suggestionResolution || "Aucune suggestion"}</p>
-                </div>
-
-                {/* Commentaires */}
-                <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💬 Commentaires</h4>
-                    <p className="text-[11px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2">{task.commentaires || "Aucun commentaire"}</p>
                 </div>
             </div>
         </div>
@@ -405,12 +387,12 @@ function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSa
                 <div className="flex items-center gap-1.5 flex-wrap mb-2">
                     <Filter size={10} className="text-slate-400 shrink-0" />
                     <select value={filterProject} onChange={e => setFilterProject(e.target.value)} title="Filtrer par projet" aria-label="Filtrer par projet"
-                        className="text-[9px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none">
+                        className="text-[10px] font-black border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-800 focus:outline-none">
                         <option value="all">📁 Tous les projets</option>
                         {projects.filter(p => p.tasks?.length).map(p => (<option key={p.id} value={p.id}>📁 {p.info.name}</option>))}
                     </select>
                     <select value={filterResponsable} onChange={e => setFilterResponsable(e.target.value)} title="Filtrer par responsable" aria-label="Filtrer par responsable"
-                        className="text-[9px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none">
+                        className="text-[10px] font-black border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-800 focus:outline-none">
                         <option value="all">👤 Tous</option>
                         {responsables.map(r => (<option key={r} value={r}>👤 {r}</option>))}
                     </select>
@@ -422,12 +404,12 @@ function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSa
                 {/* Dates toujours visibles */}
                 <div className="flex items-center gap-2">
                     <Calendar size={10} className="text-slate-400 shrink-0" />
-                    <span className="text-[9px] font-bold text-slate-400 shrink-0">Période :</span>
-                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} title="Date début" aria-label="Date début période"
-                        className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
-                    <span className="text-[9px] text-slate-300">→</span>
-                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Date fin" aria-label="Date fin période"
-                        className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                    <span className="text-[10px] font-black text-slate-800 shrink-0">Période :</span>
+                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} title="Date début" aria-label="Date début période" placeholder="Début"
+                        className="text-[10px] font-black border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                    <span className="text-[10px] text-slate-800 font-black">→</span>
+                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Date fin" aria-label="Date fin période" placeholder="Fin"
+                        className="text-[10px] font-black border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
                     {(dateStart || dateEnd) && (
                         <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-[8px] font-bold text-red-400">✕</button>
                     )}
@@ -488,7 +470,12 @@ function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSa
             </div>
 
             {/* Détail tâche */}
-            {selectedTask && <TaskDetailPanel ft={selectedTask} onClose={() => setSelectedTask(null)} onDateChange={handleDateChange} onStatusChange={handleStatusChange} />}
+            {selectedTask && <TaskDetailPanel ft={selectedTask} onClose={() => setSelectedTask(null)} onUpdate={(ft, changes) => {
+                const updated = { ...ft.task, ...changes };
+                if (changes.dateDebut || changes.dateFin) updated.statut = getAutoStatus(updated);
+                updateTask(ft.projectId, updated);
+                setSelectedTask({ ...ft, task: updated });
+            }} />}
         </div>
     );
 }
