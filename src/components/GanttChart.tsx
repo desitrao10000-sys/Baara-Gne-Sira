@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { Project, ProjectTask } from "@/lib/useSupabaseProjects";
 import {
     CalendarRange, ChevronDown, ChevronRight, AlertTriangle,
-    Filter, Clock, X, ArrowUp, ArrowDown,
+    Filter, Clock, X, ArrowUp, ArrowDown, CalendarDays, RotateCcw,
 } from "lucide-react";
 
 interface GanttTask { taskId: string; task: ProjectTask; projectName: string; projectId: string; }
@@ -189,6 +189,9 @@ export default function GanttChart({ projects }: GanttChartProps) {
     const [selectedTask, setSelectedTask] = useState<GanttTask | null>(null);
     const [viewMode, setViewMode] = useState<"cartes" | "timeline">("cartes");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    const [customStart, setCustomStart] = useState<string>("");
+    const [customEnd, setCustomEnd] = useState<string>("");
+    const [useCustomPeriod, setUseCustomPeriod] = useState(false);
 
     const allTasks = useMemo<GanttTask[]>(() => {
         const t: GanttTask[] = [];
@@ -203,6 +206,17 @@ export default function GanttChart({ projects }: GanttChartProps) {
     // Plage de dates — limitée pour éviter le gel
     const { dateStart, dateEnd } = useMemo(() => {
         const now = new Date();
+
+        // Période personnalisée
+        if (useCustomPeriod && customStart && customEnd) {
+            const cs = new Date(customStart), ce = new Date(customEnd);
+            if (!isNaN(cs.getTime()) && !isNaN(ce.getTime()) && cs <= ce) {
+                // Limiter à max 100 jours pour sécurité
+                const maxEnd = new Date(cs.getTime() + 100 * 86400000);
+                return { dateStart: cs, dateEnd: ce > maxEnd ? maxEnd : ce };
+            }
+        }
+
         if (!filtered.length) { return { dateStart: new Date(now.getFullYear(), now.getMonth(), 1), dateEnd: new Date(now.getFullYear(), now.getMonth() + 2, 0) }; }
 
         let mn = Infinity, mx = -Infinity;
@@ -216,24 +230,20 @@ export default function GanttChart({ projects }: GanttChartProps) {
 
         let s = new Date(mn), e = new Date(mx);
 
-        // Limiter la plage selon le zoom pour éviter trop de blocs
         if (zoom === "jour") {
-            // Max 31 jours autour de maintenant
             const center = new Date(now);
             s = new Date(center.getFullYear(), center.getMonth(), center.getDate() - 15);
             e = new Date(center.getFullYear(), center.getMonth(), center.getDate() + 15);
         } else if (zoom === "semaine") {
-            // Max 3 mois
             const center = new Date(now);
             s = new Date(center.getFullYear(), center.getMonth() - 1, 1);
             e = new Date(center.getFullYear(), center.getMonth() + 2, 0);
         } else {
-            // mois : ajuster au début/fin du mois
             s.setDate(1); e.setMonth(e.getMonth() + 1); e.setDate(0);
         }
 
         return { dateStart: s, dateEnd: e };
-    }, [filtered, zoom]);
+    }, [filtered, zoom, useCustomPeriod, customStart, customEnd]);
 
     const blocks = useMemo(() => getTimeBlocks(dateStart, dateEnd, zoom), [dateStart, dateEnd, zoom]);
     const sortedBlocks = useMemo(() => sortOrder === "desc" ? [...blocks].reverse() : blocks, [blocks, sortOrder]);
@@ -302,6 +312,31 @@ export default function GanttChart({ projects }: GanttChartProps) {
                         </button>
                     )}
                 </div>
+                {/* Sélecteur de période */}
+                {viewMode === "timeline" && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                        <CalendarDays size={10} className="text-slate-400 shrink-0" />
+                        <button onClick={() => setUseCustomPeriod(!useCustomPeriod)}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-bold shrink-0 ${useCustomPeriod ? "bg-vibrant-blue text-white" : "bg-slate-100 text-slate-600"}`}>
+                            Période
+                        </button>
+                        {useCustomPeriod && (
+                            <>
+                                <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} title="Date début"
+                                    aria-label="Date début de période" placeholder="Début"
+                                    className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                                <span className="text-[9px] text-slate-400">→</span>
+                                <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} title="Date fin"
+                                    aria-label="Date fin de période" placeholder="Fin"
+                                    className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                                <button onClick={() => { setUseCustomPeriod(false); setCustomStart(""); setCustomEnd(""); }}
+                                    className="p-1 rounded-lg bg-slate-100" title="Réinitialiser" aria-label="Réinitialiser période">
+                                    <RotateCcw size={10} className="text-slate-400" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* ═══ MODE CARTES ═══ */}
