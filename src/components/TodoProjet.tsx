@@ -3,9 +3,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { Project, ProjectTask } from "@/lib/useSupabaseProjects";
 import {
-    ListChecks, Filter, ChevronDown, ChevronRight,
+    ListChecks, Filter, ChevronDown,
     Calendar, User, AlertTriangle, CheckCircle2, Clock,
-    RotateCcw, Search, X, ArrowUp, ArrowDown,
+    RotateCcw, Search, X, ArrowRight, Target,
 } from "lucide-react";
 
 interface TodoProjetProps {
@@ -13,21 +13,20 @@ interface TodoProjetProps {
     onSaveTasks: (projectId: string, tasks: ProjectTask[]) => void;
 }
 
-const statusCfg: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
-    "todo": { bg: "bg-blue-50", border: "border-blue-400", text: "text-blue-700", dot: "bg-blue-500", label: "À faire" },
-    "en-cours": { bg: "bg-yellow-50", border: "border-primary-yellow", text: "text-yellow-700", dot: "bg-primary-yellow", label: "En cours" },
-    "en-retard": { bg: "bg-red-50", border: "border-red-400", text: "text-red-700", dot: "bg-red-500", label: "En retard" },
-    "termine": { bg: "bg-green-50", border: "border-green-400", text: "text-green-700", dot: "bg-green-500", label: "Terminé" },
+const statusCfg: Record<string, { bg: string; border: string; text: string; dot: string; label: string; emoji: string }> = {
+    "todo": { bg: "bg-blue-50", border: "border-blue-400", text: "text-blue-700", dot: "bg-blue-500", label: "À faire", emoji: "📋" },
+    "en-cours": { bg: "bg-yellow-50", border: "border-primary-yellow", text: "text-yellow-700", dot: "bg-primary-yellow", label: "En cours", emoji: "⏳" },
+    "en-retard": { bg: "bg-red-50", border: "border-red-400", text: "text-red-700", dot: "bg-red-500", label: "En retard", emoji: "⚠️" },
+    "termine": { bg: "bg-green-50", border: "border-green-400", text: "text-green-700", dot: "bg-green-500", label: "Terminé", emoji: "✅" },
 };
 
-function parseDate(d: string): Date | null { if (!d) return null; const p = new Date(d); return isNaN(p.getTime()) ? null : p; }
+function parseDate(d: string): Date | null { if (!d) return null; const p = new Date(d + "T00:00:00"); return isNaN(p.getTime()) ? null : p; }
 function fmtDate(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); }
-function fmtFull(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); }
 function daysBetween(a: Date, b: Date): number { return Math.ceil((b.getTime() - a.getTime()) / 86400000); }
 
 interface FlatTask { task: ProjectTask; projectId: string; projectName: string; }
 
-// ─── Détail complet tâche (même style que projet) ──────────
+// ─── Détail complet tâche ──────────
 function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
     ft: FlatTask; onClose: () => void;
     onDateChange: (ft: FlatTask, field: "dateDebut" | "dateFin", value: string) => void;
@@ -36,22 +35,24 @@ function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
     const { task, projectName } = ft;
     const cfg = statusCfg[task.statut] || statusCfg["todo"];
     const sD = parseDate(task.dateDebut), eD = parseDate(task.dateFin);
-    const isLate = task.statut === "en-retard" && eD && eD < new Date();
-    const dL = isLate && eD ? daysBetween(eD, new Date()) : 0;
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const isLate = task.statut === "en-retard" || (eD && eD < now && task.statut !== "termine");
+    const dL = isLate && eD ? daysBetween(eD, now) : 0;
     const dur = (sD && eD) ? daysBetween(sD, eD) + 1 : 0;
 
-    const tPE = (task.budgetEntreesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const tPS = (task.budgetSortiesPrev || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const tRE = (task.budgetEntreesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
-    const tRS = (task.budgetSortiesReel || []).reduce((a: number, b: any) => a + (b.montant || 0), 0);
+    // Budgets - safe reduce
+    const sum = (arr: any[] | undefined) => (arr || []).reduce((a: number, b: any) => a + (Number(b.montant) || 0), 0);
+    const tPE = sum(task.budgetEntreesPrev);
+    const tPS = sum(task.budgetSortiesPrev);
+    const tRE = sum(task.budgetEntreesReel);
+    const tRS = sum(task.budgetSortiesReel);
 
     return (
         <div className="shrink-0 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl max-h-[75vh] flex flex-col">
-            {/* En-tête */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className={`w-3 h-3 rounded-full shrink-0 ${cfg.dot}`} />
-                    <h3 className="text-[14px] font-black text-slate-800 truncate">{task.designation}</h3>
+                    <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${cfg.dot}`} />
+                    <h3 className="text-[15px] font-black text-slate-800 truncate">{task.designation}</h3>
                 </div>
                 <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full shrink-0" title="Fermer" aria-label="Fermer">
                     <X size={16} className="text-slate-500" />
@@ -61,77 +62,166 @@ function TaskDetailPanel({ ft, onClose, onDateChange, onStatusChange }: {
             <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
                 {/* Statut + Projet */}
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>
-                    <span className="text-[10px] font-semibold text-slate-500">📁 {projectName}</span>
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{cfg.emoji} {cfg.label}</span>
+                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">📁 {projectName}</span>
                 </div>
 
                 {/* Dates modifiables */}
-                {(sD || eD) && (
-                    <div className="bg-slate-50 rounded-xl p-3">
-                        <div className="flex items-center gap-3 text-[11px] font-semibold flex-wrap">
-                            <div>
-                                <span className="text-slate-400 block text-[9px]">Début</span>
-                                <input type="date" value={task.dateDebut || ""} onChange={e => onDateChange(ft, "dateDebut", e.target.value)}
-                                    title="Date début" aria-label="Date début"
-                                    className="text-[10px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" />
-                            </div>
-                            <span className="text-slate-300">→</span>
-                            <div>
-                                <span className="text-slate-400 block text-[9px]">Fin</span>
-                                <input type="date" value={task.dateFin || ""} onChange={e => onDateChange(ft, "dateFin", e.target.value)}
-                                    title="Date fin" aria-label="Date fin"
-                                    className="text-[10px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" />
-                            </div>
-                            {dur > 0 && <div className="ml-auto"><span className="text-slate-400 block text-[9px]">Durée</span><span className="text-vibrant-blue font-black">{dur}j</span></div>}
+                <div className="bg-slate-50 rounded-xl p-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div>
+                            <label className="text-slate-400 block text-[9px] font-bold mb-0.5">Date début</label>
+                            <input type="date" value={task.dateDebut || ""} onChange={e => onDateChange(ft, "dateDebut", e.target.value)}
+                                title="Date début" aria-label="Date début"
+                                className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
                         </div>
-                        {isLate && dL > 0 && (
-                            <div className="flex items-center gap-1 mt-2 text-red-600 bg-red-50 rounded-lg px-2 py-1">
-                                <AlertTriangle size={12} /><span className="text-[10px] font-bold">Retard : {dL} jour(s)</span>
+                        <span className="text-slate-300 text-lg">→</span>
+                        <div>
+                            <label className="text-slate-400 block text-[9px] font-bold mb-0.5">Date fin</label>
+                            <input type="date" value={task.dateFin || ""} onChange={e => onDateChange(ft, "dateFin", e.target.value)}
+                                title="Date fin" aria-label="Date fin"
+                                className="text-[11px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white" />
+                        </div>
+                        {dur > 0 && (
+                            <div className="ml-auto text-right">
+                                <span className="text-slate-400 block text-[9px] font-bold">Durée</span>
+                                <span className="text-vibrant-blue font-black text-[14px]">{dur}j</span>
                             </div>
                         )}
                     </div>
-                )}
-
-                {/* Changer statut */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[9px] font-bold text-slate-400">Statut :</span>
-                    {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
-                        <button key={k} onClick={() => onStatusChange(ft, k as ProjectTask["statut"])}
-                            className={`text-[9px] font-bold px-2.5 py-1 rounded-full border transition-all ${task.statut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200"}`}>
-                            {c.label}
-                        </button>
-                    ))}
+                    {isLate && dL > 0 && (
+                        <div className="flex items-center gap-1 mt-2 text-red-600 bg-red-50 rounded-lg px-2 py-1">
+                            <AlertTriangle size={12} /><span className="text-[10px] font-bold">Retard : {dL} jour(s) dépassé(s)</span>
+                        </div>
+                    )}
                 </div>
 
-                {task.description && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Description</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.description}</p></div>)}
-                {task.responsable && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Responsable</h4><p className="text-[11px] text-slate-700 font-semibold">👤 {task.responsable}</p></div>)}
-                {task.objectifs && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Objectifs</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.objectifs}</p></div>)}
-                {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) && (
-                    <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Budget</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-green-50 rounded-xl p-2"><span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span><span className="text-[12px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-red-50 rounded-xl p-2"><span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span><span className="text-[12px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-emerald-50 rounded-xl p-2"><span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span><span className="text-[12px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span></div>
-                            <div className="bg-orange-50 rounded-xl p-2"><span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span><span className="text-[12px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span></div>
-                        </div>
+                {/* Changer statut */}
+                <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Changer le statut</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {(Object.entries(statusCfg) as [string, typeof statusCfg["todo"]][]).map(([k, c]) => (
+                            <button key={k} onClick={() => onStatusChange(ft, k as ProjectTask["statut"])}
+                                className={`text-[9px] font-bold px-2.5 py-1 rounded-full border transition-all ${task.statut === k ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200"}`}>
+                                {c.emoji} {c.label}
+                            </button>
+                        ))}
                     </div>
-                )}
-                {task.risques && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Risques</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.risques}</p></div>)}
-                {task.suggestionResolution && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Suggestion</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.suggestionResolution}</p></div>)}
-                {task.commentaires && (<div><h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">Commentaires</h4><p className="text-[11px] text-slate-700 leading-relaxed">{task.commentaires}</p></div>)}
+                </div>
+
+                {/* Description */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">📝 Description</h4>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2">{task.description || "Aucune description"}</p>
+                </div>
+
+                {/* Responsable */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">👤 Responsable</h4>
+                    <p className="text-[11px] text-slate-700 font-semibold">{task.responsable || "Non assigné"}</p>
+                </div>
+
+                {/* Objectifs */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">🎯 Objectifs</h4>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50 rounded-xl p-2">{task.objectifs || "Aucun objectif défini"}</p>
+                </div>
+
+                {/* Budget */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💰 Budget</h4>
+                    {(tPE > 0 || tPS > 0 || tRE > 0 || tRS > 0) ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-green-50 rounded-xl p-2">
+                                <span className="text-[9px] font-bold text-green-600 block">Entrées prévues</span>
+                                <span className="text-[12px] font-black text-green-700">{tPE.toLocaleString("fr-FR")} FCFA</span>
+                            </div>
+                            <div className="bg-red-50 rounded-xl p-2">
+                                <span className="text-[9px] font-bold text-red-600 block">Sorties prévues</span>
+                                <span className="text-[12px] font-black text-red-700">{tPS.toLocaleString("fr-FR")} FCFA</span>
+                            </div>
+                            <div className="bg-emerald-50 rounded-xl p-2">
+                                <span className="text-[9px] font-bold text-emerald-600 block">Entrées réelles</span>
+                                <span className="text-[12px] font-black text-emerald-700">{tRE.toLocaleString("fr-FR")} FCFA</span>
+                            </div>
+                            <div className="bg-orange-50 rounded-xl p-2">
+                                <span className="text-[9px] font-bold text-orange-600 block">Sorties réelles</span>
+                                <span className="text-[12px] font-black text-orange-700">{tRS.toLocaleString("fr-FR")} FCFA</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-[11px] text-slate-400 italic">Aucun budget défini</p>
+                    )}
+                </div>
+
+                {/* Risques */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">⚡ Risques</h4>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-red-50 rounded-xl p-2">{task.risques || "Aucun risque identifié"}</p>
+                </div>
+
+                {/* Suggestion */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💡 Suggestion de résolution</h4>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-yellow-50 rounded-xl p-2">{task.suggestionResolution || "Aucune suggestion"}</p>
+                </div>
+
+                {/* Commentaires */}
+                <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-1">💬 Commentaires</h4>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2">{task.commentaires || "Aucun commentaire"}</p>
+                </div>
             </div>
         </div>
     );
 }
 
-// ─── Composant principal ──────────────────────────────────
-export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
+// ─── Page d'accueil Todo-Projet ──────────
+function TodoIntro({ totalTasks, totalProjects, onEnter }: { totalTasks: number; totalProjects: number; onEnter: () => void }) {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 slide-in">
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-700 to-violet-600 shadow-xl flex items-center justify-center mb-6">
+                <ListChecks size={44} className="text-white" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-800 mb-1">Todo-Projet</h1>
+            <p className="text-[12px] font-bold text-slate-400 mb-6">{totalTasks} tâche{totalTasks > 1 ? "s" : ""} • {totalProjects} projet{totalProjects > 1 ? "s" : ""}</p>
+
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-5 max-w-md w-full mb-6">
+                <h2 className="text-[13px] font-black text-purple-700 mb-3">📌 Qu'est-ce que le Todo-Projet ?</h2>
+                <p className="text-[11px] text-slate-700 leading-relaxed mb-3">
+                    Le <span className="font-black text-purple-700">Todo-Projet</span> est votre tableau de bord centralisé pour suivre toutes les tâches de vos projets. Il offre une vue d'ensemble claire avec une <span className="font-bold">synchronisation en temps réel</span> vers le projet et le diagramme de Gantt.
+                </p>
+                <h3 className="text-[11px] font-black text-slate-800 mb-2">🎯 Pourquoi c'est important ?</h3>
+                <p className="text-[11px] text-slate-700 leading-relaxed mb-3">
+                    Il vous permet de piloter l'ensemble de vos activités sans naviguer entre les projets. Les tâches en retard remontent <span className="font-bold text-red-600">automatiquement en priorité</span> pour une action rapide.
+                </p>
+                <h3 className="text-[11px] font-black text-slate-800 mb-2">🔧 Comment ça marche ?</h3>
+                <ul className="text-[11px] text-slate-700 leading-relaxed space-y-1 list-none">
+                    <li>🔵 <span className="font-bold text-blue-600">À faire</span> — tâches planifiées</li>
+                    <li>🟡 <span className="font-bold text-yellow-600">En cours</span> — tâches démarrées</li>
+                    <li>🔴 <span className="font-bold text-red-600">En retard</span> — délai dépassé (remontées en haut)</li>
+                    <li>🟢 <span className="font-bold text-green-600">Terminé</span> — tâches achevées</li>
+                </ul>
+                <p className="text-[11px] text-slate-600 leading-relaxed mt-3">
+                    📁 Filtrez par <span className="font-bold">projet</span>, 👤 par <span className="font-bold">responsable</span> ou 📅 par <span className="font-bold">période</span>. Cliquez sur une tâche pour voir et modifier tous ses détails.
+                </p>
+            </div>
+
+            <button onClick={onEnter}
+                className="w-full max-w-md py-4 bg-gradient-to-r from-purple-700 to-violet-600 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-transform text-[14px]">
+                Accéder au Todo-Projet <ArrowRight size={18} />
+            </button>
+        </div>
+    );
+}
+
+// ─── Liste des tâches ──────────
+function TodoList({ projects, onSaveTasks, onBack }: { projects: Project[]; onSaveTasks: (projectId: string, tasks: ProjectTask[]) => void; onBack: () => void }) {
     const [filterProject, setFilterProject] = useState<string>("all");
     const [filterResponsable, setFilterResponsable] = useState<string>("all");
+    const [filterStatus, setFilterStatus] = useState<string>("all");
     const [dateStart, setDateStart] = useState<string>("");
     const [dateEnd, setDateEnd] = useState<string>("");
-    const [useDateFilter, setUseDateFilter] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTask, setSelectedTask] = useState<FlatTask | null>(null);
 
@@ -153,20 +243,38 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
         let result = allTasks;
         if (filterProject !== "all") result = result.filter(t => t.projectId === filterProject);
         if (filterResponsable !== "all") result = result.filter(t => t.task.responsable === filterResponsable);
-        if (useDateFilter && dateStart) {
-            const ds = new Date(dateStart);
-            result = result.filter(t => { const d = parseDate(t.task.dateDebut) || parseDate(t.task.dateFin); return d && d >= ds; });
+        if (filterStatus !== "all") result = result.filter(t => t.task.statut === filterStatus);
+
+        // Filtre par période — fonctionne pour passé ET futur
+        if (dateStart) {
+            const ds = new Date(dateStart + "T00:00:00");
+            result = result.filter(t => {
+                const dd = parseDate(t.task.dateDebut);
+                const df = parseDate(t.task.dateFin);
+                // La tâche chevauche ou commence après le début de la période
+                if (df && df >= ds) return true;
+                if (dd && dd >= ds) return true;
+                return false;
+            });
         }
-        if (useDateFilter && dateEnd) {
-            const de = new Date(dateEnd);
-            result = result.filter(t => { const d = parseDate(t.task.dateFin) || parseDate(t.task.dateDebut); return d && d <= de; });
+        if (dateEnd) {
+            const de = new Date(dateEnd + "T23:59:59");
+            result = result.filter(t => {
+                const dd = parseDate(t.task.dateDebut);
+                const df = parseDate(t.task.dateFin);
+                // La tâche commence ou finit avant la fin de la période
+                if (dd && dd <= de) return true;
+                if (df && df <= de) return true;
+                return false;
+            });
         }
+
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
-            result = result.filter(t => t.task.designation.toLowerCase().includes(q) || t.task.description?.toLowerCase().includes(q));
+            result = result.filter(t => t.task.designation.toLowerCase().includes(q) || (t.task.description || "").toLowerCase().includes(q));
         }
         return result;
-    }, [allTasks, filterProject, filterResponsable, useDateFilter, dateStart, dateEnd, searchQuery]);
+    }, [allTasks, filterProject, filterResponsable, filterStatus, dateStart, dateEnd, searchQuery]);
 
     // Grouper par projet + trier (en-retard en haut)
     const grouped = useMemo(() => {
@@ -177,8 +285,8 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
         }
         for (const [, tasks] of map) {
             tasks.sort((a, b) => {
-                const p: Record<string, number> = { "en-retard": 0, "en-cours": 1, "todo": 2, "termine": 3 };
-                const pa = p[a.task.statut] ?? 4, pb = p[b.task.statut] ?? 4;
+                const pr: Record<string, number> = { "en-retard": 0, "en-cours": 1, "todo": 2, "termine": 3 };
+                const pa = pr[a.task.statut] ?? 4, pb = pr[b.task.statut] ?? 4;
                 if (pa !== pb) return pa - pb;
                 const da = parseDate(a.task.dateFin), db = parseDate(b.task.dateFin);
                 if (da && db) return da.getTime() - db.getTime();
@@ -189,8 +297,8 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
     }, [filtered]);
 
     const stats = useMemo(() => {
-        const s = { todo: 0, "en-cours": 0, "en-retard": 0, termine: 0, total: allTasks.length };
-        for (const t of allTasks) s[t.task.statut]++;
+        const s: Record<string, number> = { todo: 0, "en-cours": 0, "en-retard": 0, termine: 0, total: allTasks.length };
+        for (const t of allTasks) { if (s[t.task.statut] !== undefined) s[t.task.statut]++; }
         return s;
     }, [allTasks]);
 
@@ -219,53 +327,34 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
 
     const handleStatusChange = useCallback((ft: FlatTask, statut: ProjectTask["statut"]) => {
         updateTask(ft.projectId, { ...ft.task, statut });
-        if (selectedTask?.task.id === ft.task.id) setSelectedTask({ ...ft, task: { ...ft.task, statut } });
+        if (selectedTask?.task.id === ft.task.id) {
+            setSelectedTask({ ...ft, task: { ...ft.task, statut } });
+        }
     }, [updateTask, selectedTask]);
 
     const resetFilters = () => {
-        setFilterProject("all"); setFilterResponsable("all"); setSearchQuery("");
-        setUseDateFilter(false); setDateStart(""); setDateEnd("");
+        setFilterProject("all"); setFilterResponsable("all"); setFilterStatus("all");
+        setSearchQuery(""); setDateStart(""); setDateEnd("");
     };
 
-    if (!allTasks.length) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 slide-in">
-                <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center mb-4">
-                    <ListChecks size={36} className="text-primary-yellow" />
-                </div>
-                <h2 className="text-lg font-black text-slate-800 mb-2">Todo-Projet</h2>
-                <p className="text-xs text-slate-600 font-semibold text-center">Aucune tâche. Créez des projets avec des tâches pour commencer.</p>
-            </div>
-        );
-    }
+    const hasFilters = filterProject !== "all" || filterResponsable !== "all" || filterStatus !== "all" || searchQuery || dateStart || dateEnd;
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden slide-in">
-            {/* En-tête violet */}
-            <div className="shrink-0 bg-gradient-to-r from-purple-700 to-violet-600 px-4 py-4 shadow-lg">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                        <ListChecks size={22} className="text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-[16px] font-black text-white uppercase tracking-wide">Todo-Projet</h1>
-                        <p className="text-[10px] font-bold text-white/70">{stats.total} tâche{stats.total > 1 ? "s" : ""} • {projects.filter(p => p.tasks?.length).length} projet{projects.filter(p => p.tasks?.length).length > 1 ? "s" : ""}</p>
-                    </div>
-                </div>
-                <p className="text-[10px] text-white/80 leading-relaxed">
-                    Le <span className="font-black text-white">Todo-Projet</span> est votre tableau de bord de suivi des tâches. Il centralise toutes les tâches de vos projets avec une synchronisation en temps réel. Les tâches en retard remontent automatiquement en priorité. Utilisez les filtres pour visualiser par <span className="font-bold text-white">projet</span>, par <span className="font-bold text-white">responsable</span> ou par <span className="font-bold text-white">période</span>. Cliquez sur une tâche pour voir tous ses détails et modifier les dates directement.
-                </p>
-            </div>
-
-            {/* Barre de filtres */}
+            {/* Barre filtres */}
             <div className="shrink-0 bg-white border-b border-slate-200 px-3 py-2">
-                {/* Stats */}
+                {/* Stats cliquables */}
                 <div className="flex items-center gap-1.5 mb-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                    <button onClick={() => setFilterStatus("all")}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg shrink-0 transition-all ${filterStatus === "all" ? "bg-slate-700 text-white shadow-sm" : "bg-slate-100 text-slate-600"}`}>
+                        <span className="text-[9px] font-bold">Tous ({stats.total})</span>
+                    </button>
                     {Object.entries(statusCfg).map(([k, c]) => (
-                        <div key={k} className={`flex items-center gap-1 px-2 py-1 rounded-lg ${c.bg} shrink-0`}>
+                        <button key={k} onClick={() => setFilterStatus(filterStatus === k ? "all" : k)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg shrink-0 transition-all ${filterStatus === k ? `${c.bg} ${c.text} shadow-sm ring-2 ring-offset-1 ${c.border}` : `${c.bg} ${c.text} opacity-70`}`}>
                             <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-                            <span className={`text-[9px] font-bold ${c.text}`}>{c.label} ({stats[k as keyof typeof stats]})</span>
-                        </div>
+                            <span className="text-[9px] font-bold">{c.emoji} {c.label} ({stats[k] || 0})</span>
+                        </button>
                     ))}
                 </div>
 
@@ -277,8 +366,8 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
                         className="w-full pl-8 pr-3 py-1.5 text-[11px] font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30" />
                 </div>
 
-                {/* Filtres */}
-                <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Filtres projet + responsable */}
+                <div className="flex items-center gap-1.5 flex-wrap mb-2">
                     <Filter size={10} className="text-slate-400 shrink-0" />
                     <select value={filterProject} onChange={e => setFilterProject(e.target.value)} title="Filtrer par projet" aria-label="Filtrer par projet"
                         className="text-[9px] font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none">
@@ -290,29 +379,27 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
                         <option value="all">👤 Tous</option>
                         {responsables.map(r => (<option key={r} value={r}>👤 {r}</option>))}
                     </select>
-
-                    {/* Filtre date */}
-                    <button onClick={() => setUseDateFilter(!useDateFilter)}
-                        className={`text-[9px] font-bold px-2 py-1 rounded-lg shrink-0 ${useDateFilter ? "bg-vibrant-blue text-white" : "bg-slate-100 text-slate-600"}`}>
-                        📅 Période
-                    </button>
-                    {useDateFilter && (
-                        <>
-                            <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} title="Date début" aria-label="Date début période"
-                                className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[100px]" />
-                            <span className="text-[9px] text-slate-400">→</span>
-                            <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Date fin" aria-label="Date fin période"
-                                className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[100px]" />
-                        </>
+                    {hasFilters && (
+                        <button onClick={resetFilters} className="p-1 rounded-lg bg-red-50" title="Réinitialiser"><RotateCcw size={10} className="text-red-400" /></button>
                     )}
+                </div>
 
-                    {(filterProject !== "all" || filterResponsable !== "all" || searchQuery || useDateFilter) && (
-                        <button onClick={resetFilters} className="p-1 rounded-lg bg-slate-100" title="Réinitialiser"><RotateCcw size={10} className="text-slate-400" /></button>
+                {/* Dates toujours visibles */}
+                <div className="flex items-center gap-2">
+                    <Calendar size={10} className="text-slate-400 shrink-0" />
+                    <span className="text-[9px] font-bold text-slate-400 shrink-0">Période :</span>
+                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} title="Date début" aria-label="Date début période"
+                        className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                    <span className="text-[9px] text-slate-300">→</span>
+                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Date fin" aria-label="Date fin période"
+                        className="text-[9px] font-semibold border border-slate-200 rounded-lg px-1.5 py-1 bg-white w-[110px]" />
+                    {(dateStart || dateEnd) && (
+                        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-[8px] font-bold text-red-400">✕</button>
                     )}
                 </div>
             </div>
 
-            {/* Liste des tâches */}
+            {/* Liste */}
             <div className="flex-1 overflow-y-auto p-3" style={{ WebkitOverflowScrolling: "touch" }}>
                 {Array.from(grouped.entries()).map(([pid, tasks]) => (
                     <div key={pid} className="mb-3">
@@ -332,10 +419,11 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
                                 const sD = parseDate(ft.task.dateDebut), eD = parseDate(ft.task.dateFin);
                                 const isLate = ft.task.statut === "en-retard";
                                 const daysLate = isLate && eD ? Math.ceil((Date.now() - eD.getTime()) / 86400000) : 0;
+                                const isSelected = selectedTask?.task.id === ft.task.id;
 
                                 return (
-                                    <button key={ft.task.id} onClick={() => setSelectedTask(selectedTask?.task.id === ft.task.id ? null : ft)}
-                                        className={`w-full rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-3 shadow-sm transition-all text-left active:scale-[0.98] ${selectedTask?.task.id === ft.task.id ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
+                                    <button key={ft.task.id} onClick={() => setSelectedTask(isSelected ? null : ft)}
+                                        className={`w-full rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-3 shadow-sm transition-all text-left active:scale-[0.98] ${isSelected ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
                                         <div className="flex items-start gap-2 mb-1.5">
                                             <span className={`w-3 h-3 rounded-full ${cfg.dot} shrink-0 mt-0.5`} />
                                             <div className="flex-1 min-w-0">
@@ -364,8 +452,27 @@ export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
                 )}
             </div>
 
-            {/* Détail tâche sélectionnée */}
+            {/* Détail tâche */}
             {selectedTask && <TaskDetailPanel ft={selectedTask} onClose={() => setSelectedTask(null)} onDateChange={handleDateChange} onStatusChange={handleStatusChange} />}
         </div>
     );
+}
+
+// ─── Composant principal (routeur interne) ──────────
+export default function TodoProjet({ projects, onSaveTasks }: TodoProjetProps) {
+    const [showList, setShowList] = useState(false);
+
+    const allTasks = useMemo(() => {
+        let count = 0;
+        for (const p of projects) { if (p.tasks?.length) count += p.tasks.length; }
+        return count;
+    }, [projects]);
+
+    const projCount = useMemo(() => projects.filter(p => p.tasks?.length).length, [projects]);
+
+    if (!showList) {
+        return <TodoIntro totalTasks={allTasks} totalProjects={projCount} onEnter={() => setShowList(true)} />;
+    }
+
+    return <TodoList projects={projects} onSaveTasks={onSaveTasks} onBack={() => setShowList(false)} />;
 }
