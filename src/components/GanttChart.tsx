@@ -18,6 +18,16 @@ const statusConfig: Record<string, { bg: string; bar: string; text: string; dot:
     "termine": { bg: "bg-green-50", bar: "bg-green-500", text: "text-green-700", dot: "bg-green-500", label: "Terminé", border: "border-green-400", emoji: "✅" },
 };
 
+function getEffectiveStatus(task: ProjectTask): ProjectTask["statut"] {
+    if (task.statut === "termine") return "termine";
+    const fin = task.dateFin ? new Date(task.dateFin + "T00:00:00") : null;
+    const debut = task.dateDebut ? new Date(task.dateDebut + "T00:00:00") : null;
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    if (fin && fin < now) return "en-retard";
+    if (debut && debut <= now && (!fin || fin >= now)) return "en-cours";
+    return "todo";
+}
+
 function parseDate(d: string): Date | null { if (!d) return null; const p = new Date(d); return isNaN(p.getTime()) ? null : p; }
 function daysBetween(a: Date, b: Date): number { return Math.ceil((b.getTime() - a.getTime()) / 86400000); }
 function fmtShort(d: Date): string { return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); }
@@ -328,7 +338,7 @@ export default function GanttChart({ projects }: GanttChartProps) {
 
     const allTasks = useMemo<GanttTask[]>(() => {
         const t: GanttTask[] = [];
-        for (const p of projects) { if (p.tasks?.length) for (const task of p.tasks) t.push({ taskId: task.id, task, projectName: p.info.name, projectId: p.id }); }
+        for (const p of projects) { if (p.tasks?.length) for (const task of p.tasks) t.push({ taskId: task.id, task: { ...task, statut: getEffectiveStatus(task) }, projectName: p.info.name, projectId: p.id }); }
         return t;
     }, [projects]);
 

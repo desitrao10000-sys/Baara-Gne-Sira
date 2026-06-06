@@ -59,6 +59,16 @@ function emptyTask(): ProjectTask {
     };
 }
 
+function getEffectiveStatus(task: ProjectTask): ProjectTask["statut"] {
+    if (task.statut === "termine") return "termine";
+    const fin = task.dateFin ? new Date(task.dateFin + "T00:00:00") : null;
+    const debut = task.dateDebut ? new Date(task.dateDebut + "T00:00:00") : null;
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    if (fin && fin < now) return "en-retard";
+    if (debut && debut <= now && (!fin || fin >= now)) return "en-cours";
+    return "todo";
+}
+
 function fmt(n: number) { return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }); }
 function fmtDate(d: string) { if (!d) return "—"; try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }); } catch { return d; } }
 
@@ -223,7 +233,8 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
             {migratedTasks.length > 0 && (
                 <div className="space-y-3 mb-4">
                     {migratedTasks.map((task) => {
-                        const st = statut(task.statut);
+                        const effectiveStatut = getEffectiveStatus(task);
+                        const st = statut(effectiveStatut);
                         const expanded = expandedId === task.id;
                         const totalEP = sumItems(task.budgetEntreesPrev);
                         const totalSP = sumItems(task.budgetSortiesPrev);
@@ -257,7 +268,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                     <div className="flex gap-1.5 mt-3 flex-wrap">
                                         {STATUTS.map((s) => (
                                             <button key={s.value} onClick={() => updateStatut(task.id, s.value as StatutValue)}
-                                                className={`px-2 py-1 rounded-full text-[11px] font-black border transition-all ${task.statut === s.value ? s.bg + " " + s.text : "bg-slate-100 text-slate-400 border-slate-200"}`}>
+                                                className={`px-2 py-1 rounded-full text-[11px] font-black border transition-all ${effectiveStatut === s.value ? s.bg + " " + s.text : "bg-slate-100 text-slate-400 border-slate-200"}`}>
                                                 <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${s.color}`} />{s.label}
                                             </button>
                                         ))}
