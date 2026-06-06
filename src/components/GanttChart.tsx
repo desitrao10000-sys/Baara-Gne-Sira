@@ -11,11 +11,11 @@ import {
 interface GanttTask { taskId: string; task: ProjectTask; projectName: string; projectId: string; }
 interface GanttChartProps { projects: Project[]; }
 
-const statusConfig: Record<string, { bg: string; bar: string; text: string; dot: string; label: string; border: string }> = {
-    "todo": { bg: "bg-slate-100", bar: "bg-slate-400", text: "text-slate-600", dot: "bg-slate-400", label: "À faire", border: "border-slate-300" },
-    "en-cours": { bg: "bg-blue-50", bar: "bg-gradient-to-r from-vibrant-blue to-blue-500", text: "text-vibrant-blue", dot: "bg-vibrant-blue", label: "En cours", border: "border-blue-300" },
-    "en-retard": { bg: "bg-red-50", bar: "bg-gradient-to-r from-red-500 to-red-600", text: "text-red-600", dot: "bg-red-500", label: "En retard", border: "border-red-300" },
-    "termine": { bg: "bg-green-50", bar: "bg-gradient-to-r from-green-500 to-emerald-500", text: "text-green-600", dot: "bg-green-500", label: "Terminé", border: "border-green-300" },
+const statusConfig: Record<string, { bg: string; bar: string; text: string; dot: string; label: string; border: string; emoji: string }> = {
+    "todo": { bg: "bg-blue-50", bar: "bg-blue-500", text: "text-blue-700", dot: "bg-blue-500", label: "À faire", border: "border-blue-400", emoji: "📋" },
+    "en-cours": { bg: "bg-yellow-50", bar: "bg-yellow-500", text: "text-yellow-700", dot: "bg-yellow-500", label: "En cours", border: "border-yellow-400", emoji: "⏳" },
+    "en-retard": { bg: "bg-red-50", bar: "bg-red-500", text: "text-red-700", dot: "bg-red-500", label: "En retard", border: "border-red-400", emoji: "⚠️" },
+    "termine": { bg: "bg-green-50", bar: "bg-green-500", text: "text-green-700", dot: "bg-green-500", label: "Terminé", border: "border-green-400", emoji: "✅" },
 };
 
 function parseDate(d: string): Date | null { if (!d) return null; const p = new Date(d); return isNaN(p.getTime()) ? null : p; }
