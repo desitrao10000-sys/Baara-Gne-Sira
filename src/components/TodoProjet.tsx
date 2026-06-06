@@ -230,18 +230,22 @@ function TodoIntro({ totalTasks, totalProjects, onEnter }: { totalTasks: number;
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-center">
                             <span className="text-[18px] block mb-1">🔵</span>
                             <span className="text-[12px] font-black text-blue-700">À faire</span>
+                            <p className="text-[9px] text-blue-600 font-semibold mt-1 leading-tight">Date début la plus proche → la plus loin</p>
                         </div>
                         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-center">
                             <span className="text-[18px] block mb-1">🟡</span>
                             <span className="text-[12px] font-black text-yellow-700">En cours</span>
+                            <p className="text-[9px] text-yellow-600 font-semibold mt-1 leading-tight">Durée la plus courte → la plus longue</p>
                         </div>
                         <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-center">
                             <span className="text-[18px] block mb-1">🔴</span>
                             <span className="text-[12px] font-black text-red-700">En retard</span>
+                            <p className="text-[9px] text-red-600 font-semibold mt-1 leading-tight">La plus en retard → la moins en retard</p>
                         </div>
                         <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 text-center">
                             <span className="text-[18px] block mb-1">🟢</span>
                             <span className="text-[12px] font-black text-green-700">Terminé</span>
+                            <p className="text-[9px] text-green-600 font-semibold mt-1 leading-tight">Terminée le plus tôt → le plus tard</p>
                         </div>
                     </div>
                     <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
