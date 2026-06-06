@@ -194,6 +194,8 @@ function TodoPersoIntro({ totalTasks, onEnter }: { totalTasks: number; onEnter: 
 function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: PersoTask[]) => void }) {
     const [filterStatus, setFilterStatus] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [dateStart, setDateStart] = useState("");
+    const [dateEnd, setDateEnd] = useState("");
     const [selectedTask, setSelectedTask] = useState<PersoTask | null>(null);
     const [showAdd, setShowAdd] = useState(false);
     const [newTask, setNewTask] = useState<PersoTask>(emptyTask());
@@ -203,8 +205,10 @@ function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: Pers
         let r = allTasks;
         if (filterStatus !== "all") r = r.filter(t => t.statut === filterStatus);
         if (searchQuery.trim()) { const q = searchQuery.toLowerCase(); r = r.filter(t => t.designation.toLowerCase().includes(q) || (t.description || "").toLowerCase().includes(q)); }
+        if (dateStart) { const ds = new Date(dateStart + "T00:00:00"); r = r.filter(t => { const d = parseDate(t.dateDebut) || parseDate(t.dateFin); return d && d >= ds; }); }
+        if (dateEnd) { const de = new Date(dateEnd + "T23:59:59"); r = r.filter(t => { const d = parseDate(t.dateFin) || parseDate(t.dateDebut); return d && d <= de; }); }
         return r;
-    }, [allTasks, filterStatus, searchQuery]);
+    }, [allTasks, filterStatus, searchQuery, dateStart, dateEnd]);
 
     const sorted = useMemo(() => {
         const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -232,7 +236,7 @@ function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: Pers
         setSelectedTask(null);
     };
     const handleAddTask = () => { if (!newTask.designation.trim()) return; onSave([...tasks, newTask]); setNewTask(emptyTask()); setShowAdd(false); };
-    const resetFilters = () => { setFilterStatus("all"); setSearchQuery(""); };
+    const resetFilters = () => { setFilterStatus("all"); setSearchQuery(""); setDateStart(""); setDateEnd(""); };
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden slide-in">
@@ -253,6 +257,15 @@ function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: Pers
                     <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Rechercher..."
                         className="w-full pl-8 pr-3 py-1.5 text-[12px] font-semibold border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30" />
+                </div>
+                <div className="flex items-center gap-1.5 mb-2">
+                    <Calendar size={13} className="text-slate-500 shrink-0" />
+                    <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} title="Début période"
+                        className="text-[11px] font-black border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-slate-700 w-[110px]" />
+                    <span className="text-[11px] text-slate-400 font-black">→</span>
+                    <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} title="Fin période"
+                        className="text-[11px] font-black border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-slate-700 w-[110px]" />
+                    {(dateStart || dateEnd) && <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-[10px] font-bold text-rose-500 shrink-0">✕</button>}
                 </div>
                 <button onClick={() => { setNewTask(emptyTask()); setShowAdd(true); }}
                     className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform">
