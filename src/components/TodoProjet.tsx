@@ -309,13 +309,33 @@ function TodoList({ projects, onSaveTasks }: { projects: Project[]; onSaveTasks:
     const grouped = useMemo(() => {
         const map = new Map<string, FlatTask[]>();
         for (const t of filtered) { if (!map.has(t.projectId)) map.set(t.projectId, []); map.get(t.projectId)!.push(t); }
+        const now = new Date(); now.setHours(0, 0, 0, 0);
         for (const [, tasks] of map) {
             tasks.sort((a, b) => {
                 const pr: Record<string, number> = { "en-retard": 0, "en-cours": 1, "todo": 2, "termine": 3 };
                 const pa = pr[a.task.statut] ?? 4, pb = pr[b.task.statut] ?? 4;
                 if (pa !== pb) return pa - pb;
-                const da = parseDate(a.task.dateFin), db = parseDate(b.task.dateFin);
-                return (da && db) ? da.getTime() - db.getTime() : 0;
+                const sA = parseDate(a.task.dateDebut), eA = parseDate(a.task.dateFin);
+                const sB = parseDate(b.task.dateDebut), eB = parseDate(b.task.dateFin);
+                if (pa === 2) { // todo: dateDebut la plus proche d'aujourd'hui d'abord
+                    const dA = sA ? Math.abs(sA.getTime() - now.getTime()) : Infinity;
+                    const dB = sB ? Math.abs(sB.getTime() - now.getTime()) : Infinity;
+                    return dA - dB;
+                }
+                if (pa === 1) { // en-cours: durée la plus courte d'abord (période la moins élargie)
+                    const durA = (sA && eA) ? eA.getTime() - sA.getTime() : Infinity;
+                    const durB = (sB && eB) ? eB.getTime() - sB.getTime() : Infinity;
+                    return durA - durB;
+                }
+                if (pa === 0) { // en-retard: dateDebut la plus éloignée d'aujourd'hui d'abord
+                    const dA = sA ? Math.abs(sA.getTime() - now.getTime()) : 0;
+                    const dB = sB ? Math.abs(sB.getTime() - now.getTime()) : 0;
+                    return dB - dA;
+                }
+                if (pa === 3) { // termine: terminées le plus tôt d'abord (dateFin croissante)
+                    return (eA && eB) ? eA.getTime() - eB.getTime() : 0;
+                }
+                return 0;
             });
         }
         return map;
