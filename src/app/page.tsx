@@ -11,6 +11,7 @@ import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanW
 import DocumentUploadFlow from "@/components/DocumentUploadFlow";
 import GanttChart from "@/components/GanttChart";
 import TodoProjet from "@/components/TodoProjet";
+import TodoPerso from "@/components/TodoPerso";
 import { useSupabaseProjects, Project } from "@/lib/useSupabaseProjects";
 import { PlusCircle, ChevronRight, FolderKanban, Calendar, MapPin, Upload, FileText, Image, Sparkles, AlertCircle, CheckCircle2, X, Loader2 } from "lucide-react";
 
@@ -36,6 +37,7 @@ export default function Home() {
     setActiveTab(tabId);
     if (tabId === "home") setCurrentView("home");
     else if (tabId === "todo-project") setCurrentView("todo-projet");
+    else if (tabId === "todo-perso") setCurrentView("todo-perso");
     else if (tabId === "gantt") setCurrentView("gantt");
   };
 
@@ -98,7 +100,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col h-screen overflow-hidden bg-pastel">
-      <Header title={currentView === "project-list" ? "Mes Projets" : currentView === "gantt" ? "Diagramme de Gantt" : currentView === "todo-projet" ? "Todo-Projet" : currentView === "project" ? "Gestion Projet" : "Baara Gnè - Sira"} showBack={currentView !== "home"} onBack={handleBack} />
+      <Header title={currentView === "project-list" ? "Mes Projets" : currentView === "gantt" ? "Diagramme de Gantt" : currentView === "todo-projet" ? "Todo-Projet" : currentView === "todo-perso" ? "Todo-Perso" : currentView === "project" ? "Gestion Projet" : "Baara Gnè - Sira"} showBack={currentView !== "home"} onBack={handleBack} />
 
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {currentView === "home" ? (
@@ -140,6 +142,8 @@ export default function Home() {
           />
         ) : currentView === "todo-projet" ? (
           <TodoProjet projects={projects} onSaveTasks={saveTasks} />
+        ) : currentView === "todo-perso" ? (
+          <TodoPerso />
         ) : currentView === "gantt" ? (
           <GanttChart projects={projects} />
         ) : currentView === "project" ? (
