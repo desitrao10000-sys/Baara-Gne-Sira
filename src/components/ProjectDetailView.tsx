@@ -225,11 +225,11 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                 {/* KPIs principaux */}
                                 <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-100">
                                     <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-4">
-                                        <div className="flex items-center gap-2 mb-3">
+                                        <div className="flex items-center justify-center gap-2 mb-3">
                                             <Calculator size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Résumé financier</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2.5">
+                                        <div className="grid grid-cols-2 gap-2.5 justify-items-center">
                                             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
                                                 <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Invest. total</p>
                                                 <p className="text-xl font-black text-white">{investTotal > 0 ? fmt(investTotal) : "—"}</p>
@@ -256,11 +256,11 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                 {/* Indicateurs clés */}
                                 <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
                                     <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4">
-                                        <div className="flex items-center gap-2 mb-3">
+                                        <div className="flex items-center justify-center gap-2 mb-3">
                                             <BarChart3 size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Indicateurs de rentabilité</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2.5">
+                                        <div className="grid grid-cols-2 gap-2.5 justify-items-center">
                                             <div className={`rounded-2xl p-3 text-center ${van >= 0 ? "bg-green-500/20 border border-green-400/30" : "bg-red-500/20 border border-red-400/30"}`}>
                                                 <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">VAN</p>
                                                 <p className={`text-xl font-black ${van >= 0 ? "text-green-300" : "text-red-300"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p>
@@ -433,7 +433,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                     <span className="text-xs font-black text-white/80 uppercase">Année {r.annee}</span>
                                                     <span className="text-sm font-black text-white">CA : {fmt(r.ca)} FCFA</span>
                                                 </div>
-                                                <div className="p-3 grid grid-cols-2 gap-2">
+                                                <div className="p-3 grid grid-cols-2 gap-2 justify-items-center">
                                                     <div className="bg-slate-50 rounded-xl p-2 text-center">
                                                         <p className="text-[10px] font-bold text-slate-500 uppercase">Marge brute</p>
                                                         <p className="text-sm font-black text-slate-900">{fmt(r.margeBrute)}</p>
