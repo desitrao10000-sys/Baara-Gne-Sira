@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
     UserCheck, Calendar, User, AlertTriangle,
-    CheckCircle2, Search, X, ArrowRight, Plus,
+    CheckCircle2, Search, X, ArrowRight, Plus, Pencil,
 } from "lucide-react";
 
 interface PersoTask {
@@ -65,6 +65,7 @@ function saveToStorage(tasks: PersoTask[]) { if (typeof window !== "undefined") 
 /* ─── Détail / Edition ─── */
 function TaskDetailPanel({ task, onClose, onSave }: { task: PersoTask; onClose: () => void; onSave: (t: PersoTask) => void }) {
     const [local, setLocal] = useState<PersoTask>({ ...task });
+    const [editField, setEditField] = useState<string | null>(null);
     const es = getEffectiveStatus(local);
     const cfg = statusCfg[es] || statusCfg["todo"];
     const sD = parseDate(local.dateDebut), eD = parseDate(local.dateFin);
@@ -79,10 +80,17 @@ function TaskDetailPanel({ task, onClose, onSave }: { task: PersoTask; onClose: 
             <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={"w-3.5 h-3.5 rounded-full shrink-0 " + cfg.dot} />
-                    <input value={local.designation} onChange={e => set({ designation: e.target.value })} placeholder="Nom de la tâche"
-                        className="text-[14px] font-black text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none flex-1 min-w-0" />
+                    {editField === "designation" ? (
+                        <input value={local.designation} onChange={e => set({ designation: e.target.value })} autoFocus placeholder="Nom de la tâche"
+                            className="text-[14px] font-black text-slate-800 bg-transparent border-b-2 border-indigo-500 focus:outline-none flex-1 min-w-0" />
+                    ) : (
+                        <p className="text-[14px] font-black text-slate-800 flex-1 min-w-0 break-words">{local.designation || "Sans nom"}</p>
+                    )}
                 </div>
-                <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full shrink-0"><X size={16} className="text-slate-500" /></button>
+                <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => setEditField(editField === "designation" ? null : "designation")} className="p-1.5 bg-slate-100 rounded-full" title="Modifier"><Pencil size={13} className="text-slate-500" /></button>
+                    <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full" title="Fermer"><X size={16} className="text-slate-500" /></button>
+                </div>
             </div>
             <div className="overflow-y-auto px-4 py-2 space-y-2.5 flex-1" style={{ WebkitOverflowScrolling: "touch" }}>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -94,31 +102,67 @@ function TaskDetailPanel({ task, onClose, onSave }: { task: PersoTask; onClose: 
                     ))}
                 </div>
                 <p className="text-[9px] text-slate-400 italic">💡 Cliquez un statut pour reclasser. Modifiez les dates pour classement auto.</p>
+
+                {/* Dates */}
                 <div className="bg-slate-50 rounded-xl p-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Début</label>
-                            <input type="date" value={local.dateDebut || ""} onChange={e => set({ dateDebut: e.target.value })} className="text-[11px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" /></div>
-                        <span className="text-slate-300 mt-3">→</span>
-                        <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Fin</label>
-                            <input type="date" value={local.dateFin || ""} onChange={e => set({ dateFin: e.target.value })} className="text-[11px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" /></div>
-                        {dur > 0 && <span className="ml-auto mt-3 text-indigo-600 font-black text-[12px]">{dur}j</span>}
-                    </div>
+                    {editField === "dates" ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Début</label>
+                                <input type="date" value={local.dateDebut || ""} onChange={e => set({ dateDebut: e.target.value })} autoFocus className="text-[11px] font-bold border border-indigo-400 rounded-lg px-1.5 py-0.5 bg-white" /></div>
+                            <span className="text-slate-300 mt-3">→</span>
+                            <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Fin</label>
+                                <input type="date" value={local.dateFin || ""} onChange={e => set({ dateFin: e.target.value })} className="text-[11px] font-bold border border-indigo-400 rounded-lg px-1.5 py-0.5 bg-white" /></div>
+                            {dur > 0 && <span className="ml-auto mt-3 text-indigo-600 font-black text-[12px]">{dur}j</span>}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Calendar size={12} className="text-slate-500" />
+                            <span className="text-[12px] text-slate-700 font-bold break-words">{sD ? fmtDate(sD) : "—"} → {eD ? fmtDate(eD) : "—"}</span>
+                            {dur > 0 && <span className="ml-auto text-indigo-600 font-black text-[12px]">{dur}j</span>}
+                        </div>
+                    )}
                     {isLate && dL > 0 && <div className="flex items-center gap-1 mt-1.5 text-rose-600 bg-rose-50 rounded-lg px-2 py-0.5"><AlertTriangle size={11} /><span className="text-[10px] font-bold">Retard : {dL}j</span></div>}
+                    <button onClick={() => setEditField(editField === "dates" ? null : "dates")} className="mt-1 text-[10px] font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-0.5"><Pencil size={9} /> {editField === "dates" ? "Terminer" : "Modifier"}</button>
                 </div>
+
+                {/* Responsable */}
                 <div>
                     <h4 className="text-[11px] font-black text-slate-800 uppercase mb-0.5">👤 Responsable / Partenaire</h4>
-                    <input value={local.responsable || ""} onChange={e => set({ responsable: e.target.value })} placeholder="Ex: Moi, Fatou, Partenaire..."
-                        className="w-full text-[11px] text-slate-700 font-bold border border-slate-200 rounded-xl px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400/30" />
+                    {editField === "responsable" ? (
+                        <input value={local.responsable || ""} onChange={e => set({ responsable: e.target.value })} autoFocus placeholder="Ex: Moi, Fatou..."
+                            className="w-full text-[11px] text-slate-700 font-bold border border-indigo-400 rounded-xl px-2 py-1.5 bg-white focus:outline-none" />
+                    ) : (
+                        <p className="text-[12px] text-slate-700 font-bold bg-slate-50 rounded-xl p-2 break-words">{local.responsable || <span className="italic text-slate-400">Non renseigné</span>}</p>
+                    )}
+                    <button onClick={() => setEditField(editField === "responsable" ? null : "responsable")} className="mt-0.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 flex items-center gap-0.5"><Pencil size={9} /> {editField === "responsable" ? "Terminer" : "Modifier"}</button>
                 </div>
+
+                {/* Description */}
                 <div>
                     <h4 className="text-[11px] font-black text-slate-800 uppercase mb-0.5">📝 Description / Objectifs</h4>
-                    <textarea value={local.description || ""} onChange={e => set({ description: e.target.value })} placeholder="Décrivez la tâche et ses objectifs..." rows={3}
-                        className="w-full text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 resize-none" />
+                    {editField === "description" ? (
+                        <textarea value={local.description || ""} onChange={e => set({ description: e.target.value })} rows={3} autoFocus
+                            className="w-full text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 resize-none" />
+                    ) : (
+                        <p className="text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 whitespace-pre-wrap break-words">
+                            {local.description || <span className="italic text-slate-400">Non renseigné</span>}
+                        </p>
+                    )}
+                    <button onClick={() => setEditField(editField === "description" ? null : "description")} className={"mt-0.5 text-[10px] font-bold flex items-center gap-0.5 " + (editField === "description" ? "text-indigo-600" : "text-slate-400 hover:text-indigo-600")}><Pencil size={9} /> {editField === "description" ? "Terminer" : "Modifier"}</button>
                 </div>
+
+                {/* Commentaires */}
                 <div>
                     <h4 className="text-[11px] font-black text-slate-800 uppercase mb-0.5">💬 Commentaires</h4>
-                    <textarea value={local.commentaires || ""} onChange={e => set({ commentaires: e.target.value })} placeholder="Notes, observations..." rows={2}
-                        className="w-full text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 resize-none" />
+                    {editField === "commentaires" ? (
+                        <textarea value={local.commentaires || ""} onChange={e => set({ commentaires: e.target.value })} rows={2} autoFocus
+                            className="w-full text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 resize-none" />
+                    ) : (
+                        <p className="text-[12px] text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-2 whitespace-pre-wrap break-words">
+                            {local.commentaires || <span className="italic text-slate-400">Non renseigné</span>}
+                        </p>
+                    )}
+                    <button onClick={() => setEditField(editField === "commentaires" ? null : "commentaires")} className={"mt-0.5 text-[10px] font-bold flex items-center gap-0.5 " + (editField === "commentaires" ? "text-indigo-600" : "text-slate-400 hover:text-indigo-600")}><Pencil size={9} /> {editField === "commentaires" ? "Terminer" : "Modifier"}</button>
                 </div>
             </div>
             <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-t border-slate-200 bg-white">
@@ -311,7 +355,7 @@ function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: Pers
                                 className={"w-full rounded-2xl border-2 p-3 shadow-sm transition-all text-left active:scale-[0.98] " + c.border + " " + c.bg}>
                                 <div className="flex items-start gap-2 mb-1">
                                     <span className={"w-3 h-3 rounded-full shrink-0 mt-0.5 " + c.dot} />
-                                    <p className="text-[13px] font-black text-slate-800 leading-tight flex-1">{task.designation}</p>
+                                    <p className="text-[13px] font-black text-slate-800 leading-tight flex-1 break-words">{task.designation}</p>
                                     <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border " + c.bg + " " + c.text + " " + c.border}>{c.label}</span>
                                 </div>
                                 {task.description && <p className="text-[10px] text-slate-500 font-semibold ml-5 mb-1 line-clamp-2">{task.description}</p>}
