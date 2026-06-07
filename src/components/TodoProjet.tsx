@@ -5,7 +5,7 @@ import { Project, ProjectTask } from "@/lib/useSupabaseProjects";
 import {
     ListChecks, Filter, ChevronDown,
     Calendar, User, AlertTriangle, CheckCircle2,
-    RotateCcw, Search, X, ArrowRight,
+    RotateCcw, Search, X, ArrowRight, Pencil,
 } from "lucide-react";
 
 interface TodoProjetProps { projects: Project[]; onSaveTasks: (projectId: string, tasks: ProjectTask[]) => void; }
@@ -33,17 +33,6 @@ function getEffectiveStatus(task: ProjectTask): ProjectTask["statut"] {
     return "todo";
 }
 
-function EditField({ label, emoji, value, onChange, bg = "bg-slate-50", rows = 2 }: {
-    label: string; emoji: string; value: string; onChange: (v: string) => void; bg?: string; rows?: number;
-}) {
-    return (
-        <div>
-            <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">{emoji} {label}</h4>
-            <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
-                className={`w-full text-[12px] text-slate-700 leading-relaxed ${bg} rounded-xl p-2 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30 resize-none`} />
-        </div>
-    );
-}
 
 // ─── Détail tâche ──────────
 function TaskDetailPanel({ ft, onClose, onSave }: {
@@ -51,6 +40,7 @@ function TaskDetailPanel({ ft, onClose, onSave }: {
 }) {
     const { projectName } = ft;
     const [local, setLocal] = useState<ProjectTask>({ ...ft.task });
+    const [editField, setEditField] = useState<string | null>(null);
     const effectiveStatut = getEffectiveStatus(local);
     const cfg = statusCfg[effectiveStatut] || statusCfg["todo"];
     const sD = parseDate(local.dateDebut), eD = parseDate(local.dateFin);
@@ -74,11 +64,18 @@ function TaskDetailPanel({ ft, onClose, onSave }: {
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl border-t-2 border-vibrant-blue shadow-2xl flex flex-col" style={{ maxHeight: "85vh" }}>
             <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${cfg.dot}`} />
-                    <input value={local.designation} onChange={e => set({ designation: e.target.value })} title="Désignation" placeholder="Nom de la tâche"
-                        className="text-[14px] font-black text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-vibrant-blue focus:outline-none flex-1 min-w-0" />
+                    <span className={"w-3.5 h-3.5 rounded-full shrink-0 " + cfg.dot} />
+                    {editField === "designation" ? (
+                        <input value={local.designation} onChange={e => set({ designation: e.target.value })} autoFocus placeholder="Nom de la tâche"
+                            className="text-[14px] font-black text-slate-800 bg-transparent border-b-2 border-vibrant-blue focus:outline-none flex-1 min-w-0" />
+                    ) : (
+                        <p className="text-[14px] font-black text-slate-800 flex-1 min-w-0 break-words">{local.designation || "Sans nom"}</p>
+                    )}
                 </div>
-                <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full shrink-0" title="Fermer"><X size={16} className="text-slate-500" /></button>
+                <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => setEditField(editField === "designation" ? null : "designation")} className="p-1.5 bg-slate-100 rounded-full" title="Modifier"><Pencil size={13} className="text-slate-500" /></button>
+                    <button onClick={onClose} className="p-1.5 bg-slate-100 rounded-full" title="Fermer"><X size={16} className="text-slate-500" /></button>
+                </div>
             </div>
 
             <div className="overflow-y-auto px-4 py-2 space-y-2.5 flex-1" style={{ WebkitOverflowScrolling: "touch" }}>
@@ -96,39 +93,61 @@ function TaskDetailPanel({ ft, onClose, onSave }: {
 
                 {/* Dates */}
                 <div className="bg-slate-50 rounded-xl p-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div>
-                            <label className="text-slate-800 block text-[10px] font-black mb-0.5">Début</label>
-                            <input type="date" value={local.dateDebut || ""} onChange={e => set({ dateDebut: e.target.value })} title="Date début"
-                                className="text-[11px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" />
+                    {editField === "dates" ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Début</label>
+                                <input type="date" value={local.dateDebut || ""} onChange={e => set({ dateDebut: e.target.value })} autoFocus title="Date début"
+                                    className="text-[11px] font-bold border border-vibrant-blue rounded-lg px-1.5 py-0.5 bg-white" /></div>
+                            <span className="text-slate-300 mt-3">→</span>
+                            <div><label className="text-slate-800 block text-[10px] font-black mb-0.5">Fin</label>
+                                <input type="date" value={local.dateFin || ""} onChange={e => set({ dateFin: e.target.value })} title="Date fin"
+                                    className="text-[11px] font-bold border border-vibrant-blue rounded-lg px-1.5 py-0.5 bg-white" /></div>
+                            {dur > 0 && <span className="ml-auto mt-3 text-vibrant-blue font-black text-[12px]">{dur}j</span>}
                         </div>
-                        <span className="text-slate-300">→</span>
-                        <div>
-                            <label className="text-slate-800 block text-[10px] font-black mb-0.5">Fin</label>
-                            <input type="date" value={local.dateFin || ""} onChange={e => set({ dateFin: e.target.value })} title="Date fin"
-                                className="text-[11px] font-bold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-white" />
-                        </div>
-                        {dur > 0 && <span className="ml-auto text-vibrant-blue font-black text-[12px]">{dur}j</span>}
-                    </div>
-                    {isLate && dL > 0 && (
-                        <div className="flex items-center gap-1 mt-1.5 text-red-600 bg-red-50 rounded-lg px-2 py-0.5">
-                            <AlertTriangle size={11} /><span className="text-[10px] font-bold">Retard : {dL}j</span>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Calendar size={12} className="text-slate-500" />
+                            <span className="text-[12px] text-slate-700 font-bold">{sD ? fmtDate(sD) : "—"} → {eD ? fmtDate(eD) : "—"}</span>
+                            {dur > 0 && <span className="ml-auto text-vibrant-blue font-black text-[12px]">{dur}j</span>}
                         </div>
                     )}
+                    {isLate && dL > 0 && <div className="flex items-center gap-1 mt-1.5 text-red-600 bg-red-50 rounded-lg px-2 py-0.5"><AlertTriangle size={11} /><span className="text-[10px] font-bold">Retard : {dL}j</span></div>}
+                    <button onClick={() => setEditField(editField === "dates" ? null : "dates")} className="mt-1 text-[10px] font-bold text-slate-400 hover:text-vibrant-blue flex items-center gap-0.5"><Pencil size={9} /> {editField === "dates" ? "Terminer" : "Modifier"}</button>
                 </div>
 
                 {/* Responsable */}
                 <div>
                     <h4 className="text-[11px] font-black text-slate-800 uppercase mb-0.5">👤 Responsable</h4>
-                    <input value={local.responsable || ""} onChange={e => set({ responsable: e.target.value })} placeholder="Nom" title="Responsable"
-                        className="w-full text-[11px] text-slate-700 font-bold border border-slate-200 rounded-xl px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30" />
+                    {editField === "responsable" ? (
+                        <input value={local.responsable || ""} onChange={e => set({ responsable: e.target.value })} autoFocus placeholder="Nom" title="Responsable"
+                            className="w-full text-[11px] text-slate-700 font-bold border border-vibrant-blue rounded-xl px-2 py-1.5 bg-white focus:outline-none" />
+                    ) : (
+                        <p className="text-[12px] text-slate-700 font-bold bg-slate-50 rounded-xl p-2">{local.responsable || <span className="italic text-slate-400">Non renseigné</span>}</p>
+                    )}
+                    <button onClick={() => setEditField(editField === "responsable" ? null : "responsable")} className="mt-0.5 text-[10px] font-bold text-slate-400 hover:text-vibrant-blue flex items-center gap-0.5"><Pencil size={9} /> {editField === "responsable" ? "Terminer" : "Modifier"}</button>
                 </div>
 
-                <EditField label="Description" emoji="📝" value={local.description || ""} onChange={v => set({ description: v })} rows={2} />
-                <EditField label="Objectifs" emoji="🎯" value={local.objectifs || ""} onChange={v => set({ objectifs: v })} bg="bg-blue-50" rows={2} />
-                <EditField label="Risques" emoji="⚡" value={local.risques || ""} onChange={v => set({ risques: v })} bg="bg-red-50" />
-                <EditField label="Suggestion" emoji="💡" value={local.suggestionResolution || ""} onChange={v => set({ suggestionResolution: v })} bg="bg-yellow-50" />
-                <EditField label="Commentaires" emoji="💬" value={local.commentaires || ""} onChange={v => set({ commentaires: v })} rows={2} />
+                {/* Champs texte avec lecture/edit */}
+                {([
+                    ["description", "Description", "📝", local.description || "", "bg-slate-50"],
+                    ["objectifs", "Objectifs", "🎯", local.objectifs || "", "bg-blue-50"],
+                    ["risques", "Risques", "⚡", local.risques || "", "bg-red-50"],
+                    ["suggestion", "Suggestion", "💡", local.suggestionResolution || "", "bg-yellow-50"],
+                    ["commentaires", "Commentaires", "💬", local.commentaires || "", "bg-slate-50"],
+                ] as const).map(([id, label, emoji, value, bg]) => (
+                    <div key={id}>
+                        <h4 className="text-[11px] font-black text-slate-800 uppercase mb-1">{emoji} {label}</h4>
+                        {editField === id ? (
+                            <textarea value={value} onChange={e => set({ [id === "suggestion" ? "suggestionResolution" : id]: e.target.value })} rows={3} autoFocus
+                                className={"w-full text-[12px] text-slate-700 leading-relaxed " + bg + " rounded-xl p-2 border border-vibrant-blue focus:outline-none focus:ring-2 focus:ring-vibrant-blue/30 resize-none"} />
+                        ) : (
+                            <p className={"text-[12px] text-slate-700 leading-relaxed rounded-xl p-2 whitespace-pre-wrap " + bg}>
+                                {value || <span className="italic text-slate-400">Non renseigné</span>}
+                            </p>
+                        )}
+                        <button onClick={() => setEditField(editField === id ? null : id)} className={"mt-0.5 text-[10px] font-bold flex items-center gap-0.5 " + (editField === id ? "text-vibrant-blue" : "text-slate-400 hover:text-vibrant-blue")}><Pencil size={9} /> {editField === id ? "Terminer" : "Modifier"}</button>
+                    </div>
+                ))}
 
                 {/* Budget détaillé */}
                 <div>
