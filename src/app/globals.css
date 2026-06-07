@@ -157,22 +157,13 @@ body {
 }
 
 p,
-span,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
 li,
 td,
 th,
-label,
-a,
-button,
 div {
   overflow-wrap: break-word;
   word-break: break-word;
+  text-align: justify;
 }
 
 /* Empêcher le débordement horizontal global */
