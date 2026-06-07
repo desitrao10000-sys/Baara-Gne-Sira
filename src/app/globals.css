@@ -148,3 +148,35 @@ body {
 .animate-slide-in-left {
   animation: slideInLeft 0.35s ease-out;
 }
+
+/* Force le retour à la ligne sur tous les textes - empêche le débordement horizontal */
+* {
+  max-width: 100vw;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+td,
+th,
+label,
+a,
+button,
+div {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Empêcher le débordement horizontal global */
+html,
+body {
+  overflow-x: hidden !important;
+}

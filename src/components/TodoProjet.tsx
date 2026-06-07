@@ -450,16 +450,16 @@ function TodoList({ projects, onSaveTasks }: { projects: Project[]; onSaveTasks:
                                 const dL = isLate && eD ? Math.ceil((Date.now() - eD.getTime()) / 86400000) : 0;
                                 return (
                                     <button key={ft.task.id} onClick={() => setSelectedTask(selectedTask?.task.id === ft.task.id ? null : ft)}
-                                        className={`w-full rounded-2xl border-2 ${c.border} ${c.bg} p-3 shadow-sm transition-all text-left active:scale-[0.98] ${selectedTask?.task.id === ft.task.id ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
-                                        <div className="flex items-start gap-2 mb-1 overflow-hidden">
+                                        className={`w-full rounded-2xl border-2 ${c.border} ${c.bg} p-3 shadow-sm transition-all text-left active:scale-[0.98] overflow-hidden ${selectedTask?.task.id === ft.task.id ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
+                                        <div className="flex items-start gap-2 mb-1" style={{ overflow: "hidden" }}>
                                             <span className={`w-3 h-3 rounded-full ${c.dot} shrink-0 mt-0.5`} />
-                                            <p className="text-[13px] font-black text-black leading-tight flex-1 min-w-0 overflow-hidden break-words">{ft.task.designation}</p>
+                                            <p className="text-[13px] font-black text-black leading-tight flex-1 min-w-0" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{ft.task.designation}</p>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${c.bg} ${c.text} border ${c.border}`}>{c.label}</span>
                                         </div>
-                                        <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500">
-                                            <span className="flex items-center gap-1"><Calendar size={9} /> {sD ? fmtDate(sD) : "—"} → {eD ? fmtDate(eD) : "—"}</span>
-                                            {ft.task.responsable && <span className="flex items-center gap-1"><User size={9} /> {ft.task.responsable}</span>}
-                                            {isLate && dL > 0 && <span className="text-red-600 font-bold flex items-center gap-1"><AlertTriangle size={9} /> {dL}j</span>}
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-semibold text-slate-500" style={{ overflow: "hidden" }}>
+                                            <span className="flex items-center gap-1 shrink-0"><Calendar size={9} /> {sD ? fmtDate(sD) : "—"} → {eD ? fmtDate(eD) : "—"}</span>
+                                            {ft.task.responsable && <span className="flex items-center gap-1 shrink-0" style={{ wordBreak: "break-word" }}><User size={9} /> {ft.task.responsable}</span>}
+                                            {isLate && dL > 0 && <span className="text-red-600 font-bold flex items-center gap-1 shrink-0"><AlertTriangle size={9} /> {dL}j</span>}
                                         </div>
                                     </button>
                                 );
