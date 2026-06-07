@@ -1466,7 +1466,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                     <span className="text-[11px] font-black text-white bg-vibrant-blue rounded-full w-7 h-7 flex items-center justify-center">A{r.annee}</span>
                                     <span className="text-[11px] font-bold text-slate-700">CA : {fmt(r.ca)} FCFA</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-1.5 text-[11px] text-center justify-items-center"
+                                <div className="grid grid-cols-2 gap-1.5 text-[11px] text-center">
                                     <span className="text-slate-600">Marge brute : <b className="text-slate-800">{fmt(r.margeBrute)}</b></span>
                                     <span className="text-slate-600">BAI : <b className="text-slate-800">{fmt(r.bai)}</b></span>
                                     <span className="text-slate-600">Impôt : <b className="text-red-500">{fmt(r.impot)}</b></span>
