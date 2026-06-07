@@ -1337,7 +1337,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                     </div>
                     <div className="bg-gradient-to-br from-vibrant-blue to-blue-700 rounded-2xl p-4 mb-4 text-white shadow-lg">
                         <h3 className="text-xs font-black uppercase tracking-wider mb-3 text-white/80">📊 Indicateurs clés</h3>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3 text-center">
                             <div>
                                 <p className="text-[10px] text-white/70 font-bold">VAN</p>
                                 <p className={`text-lg font-black ${results.van >= 0 ? "text-green-300" : "text-red-300"}`}>{results.van >= 0 ? "+" : ""}{fmt(results.van)}</p>
@@ -1357,7 +1357,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                 <p className="text-[9px] text-white/50">{results.ip >= 1 ? "✅ IP>1 = bon" : "⚠️ IP<1"}</p>
                             </div>
                         </div>
-                        <div className="mt-3 pt-3 border-t border-white/20">
+                        <div className="mt-3 pt-3 border-t border-white/20 text-center"
                             <p className="text-[10px] text-white/70 font-bold">⏱ Délai récupération</p>
                             <p className="text-sm font-black">{results.delaiRecup > 0 ? `${results.delaiRecup} an(s)` : "Non atteint"}</p>
                         </div>
@@ -1466,7 +1466,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
                                     <span className="text-[11px] font-black text-white bg-vibrant-blue rounded-full w-7 h-7 flex items-center justify-center">A{r.annee}</span>
                                     <span className="text-[11px] font-bold text-slate-700">CA : {fmt(r.ca)} FCFA</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                                <div className="grid grid-cols-2 gap-1.5 text-[11px] text-center"
                                     <span className="text-slate-600">Marge brute : <b className="text-slate-800">{fmt(r.margeBrute)}</b></span>
                                     <span className="text-slate-600">BAI : <b className="text-slate-800">{fmt(r.bai)}</b></span>
                                     <span className="text-slate-600">Impôt : <b className="text-red-500">{fmt(r.impot)}</b></span>
