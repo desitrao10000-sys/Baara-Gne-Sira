@@ -451,9 +451,9 @@ function TodoList({ projects, onSaveTasks }: { projects: Project[]; onSaveTasks:
                                 return (
                                     <button key={ft.task.id} onClick={() => setSelectedTask(selectedTask?.task.id === ft.task.id ? null : ft)}
                                         className={`w-full rounded-2xl border-2 ${c.border} ${c.bg} p-3 shadow-sm transition-all text-left active:scale-[0.98] ${selectedTask?.task.id === ft.task.id ? "ring-2 ring-vibrant-blue ring-offset-1" : ""}`}>
-                                        <div className="flex items-start gap-2 mb-1">
+                                        <div className="flex items-start gap-2 mb-1 overflow-hidden">
                                             <span className={`w-3 h-3 rounded-full ${c.dot} shrink-0 mt-0.5`} />
-                                            <p className="text-[13px] font-black text-black leading-tight flex-1 break-words">{ft.task.designation}</p>
+                                            <p className="text-[13px] font-black text-black leading-tight flex-1 min-w-0 overflow-hidden break-words">{ft.task.designation}</p>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${c.bg} ${c.text} border ${c.border}`}>{c.label}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500">

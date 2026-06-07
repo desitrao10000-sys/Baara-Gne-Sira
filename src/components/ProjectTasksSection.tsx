@@ -203,9 +203,9 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                 {items.length > 0 ? (
                     <div className="space-y-1">
                         {items.map((item) => (
-                            <div key={item.id} className="flex justify-between text-xs">
-                                <span className="font-semibold text-slate-600">{item.designation || "—"}</span>
-                                <span className={`font-black ${totalColor}`}>{sign}{fmt(item.montant)} FCFA</span>
+                            <div key={item.id} className="flex justify-between text-xs gap-2 overflow-hidden">
+                                <span className="font-semibold text-slate-600 break-words flex-1 min-w-0">{item.designation || "—"}</span>
+                                <span className={`font-black ${totalColor} shrink-0 whitespace-nowrap`}>{sign}{fmt(item.montant)} FCFA</span>
                             </div>
                         ))}
                         <div className="flex justify-between text-xs border-t pt-1 mt-1" style={{ borderColor: borderColor.replace("border-", "") }}>
@@ -246,15 +246,15 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                         return (
                             <div key={task.id} className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                                 {/* Header tâche */}
-                                <div className="p-4">
+                                <div className="p-4 overflow-hidden">
                                     <div className="flex items-start gap-3">
                                         <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${st.color}`} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-black text-slate-900 truncate">{task.designation}</p>
-                                            {task.responsable && <p className="text-[12px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5"><User size={11} /> {task.responsable}</p>}
+                                        <div className="flex-1 min-w-0 overflow-hidden">
+                                            <p className="text-sm font-black text-slate-900 break-words">{task.designation}</p>
+                                            {task.responsable && <p className="text-[12px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5 overflow-hidden"><User size={11} className="shrink-0" /> <span className="break-words">{task.responsable}</span></p>}
                                             <div className="flex items-center gap-2 mt-1">
-                                                {task.dateDebut && <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-0.5"><Calendar size={10} /> {fmtDate(task.dateDebut)}</span>}
-                                                {task.dateFin && <span className="text-[11px] text-slate-400 font-semibold">→ {fmtDate(task.dateFin)}</span>}
+                                                {task.dateDebut && <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-0.5 shrink-0"><Calendar size={10} /> {fmtDate(task.dateDebut)}</span>}
+                                                {task.dateFin && <span className="text-[11px] text-slate-400 font-semibold shrink-0">→ {fmtDate(task.dateFin)}</span>}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1.5 shrink-0">

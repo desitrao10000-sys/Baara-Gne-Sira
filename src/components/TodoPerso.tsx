@@ -353,12 +353,12 @@ function TodoPersoList({ tasks, onSave }: { tasks: PersoTask[]; onSave: (t: Pers
                         return (
                             <button key={task.id} onClick={() => setSelectedTask(task)}
                                 className={"w-full rounded-2xl border-2 p-3 shadow-sm transition-all text-left active:scale-[0.98] " + c.border + " " + c.bg}>
-                                <div className="flex items-start gap-2 mb-1">
+                                <div className="flex items-start gap-2 mb-1 overflow-hidden">
                                     <span className={"w-3 h-3 rounded-full shrink-0 mt-0.5 " + c.dot} />
-                                    <p className="text-[13px] font-black text-slate-800 leading-tight flex-1 break-words">{task.designation}</p>
+                                    <p className="text-[13px] font-black text-slate-800 leading-tight flex-1 min-w-0 overflow-hidden break-words">{task.designation}</p>
                                     <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border " + c.bg + " " + c.text + " " + c.border}>{c.label}</span>
                                 </div>
-                                {task.description && <p className="text-[10px] text-slate-500 font-semibold ml-5 mb-1 line-clamp-2">{task.description}</p>}
+                                {task.description && <p className="text-[10px] text-slate-500 font-semibold ml-5 mb-1 line-clamp-2 overflow-hidden break-words">{task.description}</p>}
                                 <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500">
                                     <span className="flex items-center gap-1"><Calendar size={9} /> {sD ? fmtDate(sD) : "—"} → {eD ? fmtDate(eD) : "—"}</span>
                                     {task.responsable && <span className="flex items-center gap-1"><User size={9} /> {task.responsable}</span>}
