@@ -196,7 +196,7 @@ export default function ProjectDocumentsSection({ projectId, savedDocuments = []
                         <span className="text-white font-black text-sm">Télécharger un document</span>
                     </div>
                     <p className="text-white/70 text-[11px] font-semibold mb-3">
-                        PDF, Word ou photos — L'Assistant IA lira et remplira automatiquement les sections du projet
+                        <span className="block text-center">PDF, Word ou photos — L'Assistant IA lira et remplira automatiquement les sections du projet</span>
                     </p>
                     <input
                         ref={fileInputRef}
@@ -214,7 +214,7 @@ export default function ProjectDocumentsSection({ projectId, savedDocuments = []
                             <Upload size={24} className="text-white" />
                         </div>
                         <span className="text-white font-bold text-sm">Cliquer pour sélectionner des fichiers</span>
-                        <span className="text-white/60 text-[11px] font-semibold">PDF • Word • Images (max 20 Mo)</span>
+                        <span className="text-white/60 text-[11px] font-semibold block text-center">PDF • Word • Images (max 20 Mo)</span>
                     </button>
                 </div>
             </div>
@@ -365,7 +365,7 @@ export default function ProjectDocumentsSection({ projectId, savedDocuments = []
                 <div className="text-center py-6 mb-4">
                     <FileText size={40} className="text-purple-200 mx-auto mb-3" />
                     <p className="text-slate-400 font-bold text-sm">Aucun document téléchargé</p>
-                    <p className="text-slate-400 text-xs mt-1">Télécharge un PDF, Word ou photo pour démarrer</p>
+                    <p className="text-slate-400 text-xs mt-1 text-center">Télécharge un PDF, Word ou photo pour démarrer</p>
                 </div>
             )}
 

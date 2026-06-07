@@ -317,7 +317,7 @@ export default function DocumentUploadFlow({ onComplete, onCancel }: Props) {
                                         <Upload size={32} className="text-white" />
                                     </div>
                                     <span className="text-white font-bold text-sm">Cliquer pour sélectionner un fichier</span>
-                                    <span className="text-white/60 text-[11px] font-semibold">PDF • Word • Images (max 20 Mo)</span>
+                                    <span className="text-white/60 text-[11px] font-semibold block text-center">PDF • Word • Images (max 20 Mo)</span>
                                 </button>
                             </div>
                         </div>
