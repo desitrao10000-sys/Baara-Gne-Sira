@@ -195,8 +195,7 @@ export default function ProjectDocumentsSection({ projectId, savedDocuments = []
                         <Upload size={18} className="text-yellow-300" />
                         <span className="text-white font-black text-sm">Télécharger un document</span>
                     </div>
-                    <p className="text-white/70 text-[11px] font-semibold mb-3">
-                        <span className="block text-center">PDF, Word ou photos — L'Assistant IA lira et remplira automatiquement les sections du projet</span>
+                    <p className="text-white/70 text-[11px] font-semibold mb-3 text-center">PDF, Word ou photos — L'Assistant IA lira et remplira automatiquement les sections du projet
                     </p>
                     <input
                         ref={fileInputRef}
