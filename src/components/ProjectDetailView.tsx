@@ -221,15 +221,15 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                         for (let t = 1; t <= 100; t += 0.5) { let npv = -investTotal; caAnnees.forEach((ca: number, i: number) => { const bai2 = ca - ca * txVar - nCF - nCFi - amortAnnuel, imp2 = bai2 > 0 ? bai2 * txIS2 : 0; npv += ((bai2 - imp2) + amortAnnuel) / Math.pow(1 + t / 100, i + 1); }); if (npv < 0) { tri = t; break; } }
 
                         return (
-                            <div className="space-y-4">
+                            <div className="space-y-4 text-center">
                                 {/* KPIs principaux */}
                                 <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-100">
-                                    <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-4">
+                                    <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-4 text-center">
                                         <div className="flex items-center justify-center gap-2 mb-3">
                                             <Calculator size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Résumé financier</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3 justify-items-center">
+                                        <div className="grid grid-cols-2 gap-3 text-center">
                                             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 w-full">
                                                 <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">💰 Invest. total</p>
                                                 <p className="text-2xl font-black text-white leading-tight">{investTotal > 0 ? fmt(investTotal) : "—"}</p>
@@ -256,12 +256,12 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
 
                                 {/* Indicateurs clés */}
                                 <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
-                                    <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4">
+                                    <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 text-center">
                                         <div className="flex items-center justify-center gap-2 mb-3">
                                             <BarChart3 size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Indicateurs de rentabilité</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3 justify-items-center">
+                                        <div className="grid grid-cols-2 gap-3 text-center">
                                             <div className={`rounded-2xl p-3.5 text-center w-full ${van >= 0 ? "bg-green-500/15 border border-green-400/25" : "bg-red-500/15 border border-red-400/25"}`}>
                                                 <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">📈 VAN</p>
                                                 <p className={`text-2xl font-black leading-tight ${van >= 0 ? "text-green-300" : "text-red-300"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p>
@@ -434,7 +434,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                     <span className="text-xs font-black text-white/80 uppercase">Année {r.annee}</span>
                                                     <span className="text-sm font-black text-white">CA : {fmt(r.ca)} FCFA</span>
                                                 </div>
-                                                <div className="p-3 grid grid-cols-2 gap-2.5 justify-items-center">
+                                                <div className="p-3 grid grid-cols-2 gap-2.5 text-center">
                                                     <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-xl p-2.5 text-center border border-slate-200/50 w-full">
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marge brute</p>
                                                         <p className="text-base font-black text-slate-900 mt-0.5">{fmt(r.margeBrute)}</p>
