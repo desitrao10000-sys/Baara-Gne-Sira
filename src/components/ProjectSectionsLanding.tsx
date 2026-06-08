@@ -24,19 +24,6 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
 
     const sections = [
         {
-            id: "detail",
-            title: "Section 2",
-            label: "Détail du Projet",
-            description: "Nom, secteur, localisation, zone, dates, description et objectifs de votre projet",
-            icon: <FileText size={28} className="text-amber-600" />,
-            bgColor: "from-amber-400 via-yellow-400 to-amber-500",
-            borderColor: "border-amber-200",
-            shadowColor: "shadow-amber-500/20",
-            badgeColor: "bg-amber-100 text-amber-700",
-            completed: hasProject && !!project.info.name,
-            lockIcon: false,
-        },
-        {
             id: "team",
             title: "Section 1",
             label: "Équipe du Projet",
@@ -47,7 +34,18 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
             shadowColor: "shadow-emerald-500/20",
             badgeColor: "bg-emerald-100 text-emerald-700",
             completed: hasProject && !!project.manager,
-            lockIcon: false,
+        },
+        {
+            id: "detail",
+            title: "Section 2",
+            label: "Détail du Projet",
+            description: "Nom, secteur, localisation, zone, dates, description et objectifs de votre projet",
+            icon: <FileText size={28} className="text-amber-600" />,
+            bgColor: "from-amber-400 via-yellow-400 to-amber-500",
+            borderColor: "border-amber-200",
+            shadowColor: "shadow-amber-500/20",
+            badgeColor: "bg-amber-100 text-amber-700",
+            completed: hasProject && !!project.info.name,
         },
         {
             id: "business",
@@ -60,7 +58,6 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
             shadowColor: "shadow-blue-500/20",
             badgeColor: "bg-blue-100 text-blue-700",
             completed: hasProject && !!project.businessPlan,
-            lockIcon: false,
         },
         {
             id: "tasks",
@@ -73,7 +70,6 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
             shadowColor: "shadow-purple-500/20",
             badgeColor: "bg-purple-100 text-purple-700",
             completed: hasProject && !!project.tasks && project.tasks.length > 0,
-            lockIcon: false,
         },
     ];
 
@@ -137,23 +133,20 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                     </button>
                 )}
 
-                {/* 4 Cartes de sections */}
+                {/* 4 Cartes de sections — toujours cliquables */}
                 <div className="space-y-3">
                     {sections.map((section) => {
-                        const isClickable = hasProject || section.id === "detail";
                         return (
                             <button
                                 key={section.id}
                                 onClick={() => {
-                                    if (section.id === "detail" && !hasProject) {
+                                    if (!hasProject) {
                                         onCreateProject();
-                                    } else if (isClickable) {
+                                    } else {
                                         onSectionClick(section.id);
                                     }
                                 }}
-                                disabled={!isClickable && section.id !== "detail"}
-                                className={`w-full rounded-2xl overflow-hidden shadow-lg ${section.shadowColor} border ${section.borderColor} active:scale-[0.98] transition-transform text-left ${!isClickable && section.id !== "detail" ? "opacity-50 cursor-not-allowed" : ""
-                                    }`}
+                                className={`w-full rounded-2xl overflow-hidden shadow-lg ${section.shadowColor} border ${section.borderColor} active:scale-[0.98] transition-transform text-left`}
                             >
                                 {/* Barre de titre colorée */}
                                 <div className={`bg-gradient-to-r ${section.bgColor} px-4 py-3 flex items-center gap-3`}>
@@ -176,7 +169,7 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                                     <p className="text-xs font-semibold text-slate-500 leading-relaxed">{section.description}</p>
                                     <div className="flex items-center justify-between mt-2">
                                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${section.badgeColor}`}>
-                                            {section.completed ? "✅ Complété" : isClickable || section.id === "detail" ? "📝 À compléter" : "🔒 Non disponible"}
+                                            {section.completed ? "✅ Complété" : "📝 À compléter"}
                                         </span>
                                     </div>
                                 </div>
