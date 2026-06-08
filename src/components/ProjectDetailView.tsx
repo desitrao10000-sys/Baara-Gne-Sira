@@ -143,7 +143,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                             <h2 className="text-white font-black text-lg leading-tight flex-1 truncate">{info.name}</h2>
                         </div>
                         {/* Toutes les informations en dessous */}
-                        <div className="bg-white divide-y divide-slate-100">
+                        <div className="bg-white divide-y divide-slate-100 text-justify">
                             {info.sector && (
                                 <div className="flex items-center gap-3 px-4 py-3">
                                     <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Building2 size={15} className="text-yellow-600" /></div>
@@ -298,7 +298,7 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                         {bpExpanded ? <ChevronUp size={16} className="text-blue-500" /> : <ChevronDown size={16} className="text-blue-500" />}
                                     </button>
                                     {bpExpanded && (
-                                        <div className="bg-white p-4 space-y-3">
+                                        <div className="bg-white p-4 space-y-3 text-justify">
                                             {[
                                                 { label: "Invest. matériel", icon: <Calculator size={14} />, key: "investissementMateriel", val: bp.investissementMateriel, mont: nIM },
                                                 { label: "Invest. immatériel", icon: <FileSpreadsheet size={14} />, key: "investissementImateriel", val: bp.investissementImateriel, mont: nII },
