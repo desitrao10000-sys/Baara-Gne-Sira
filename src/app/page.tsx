@@ -6,6 +6,7 @@ import Dock from "@/components/Dock";
 import ProjectGrid from "@/components/ProjectGrid";
 import ProjectView from "@/components/ProjectView";
 import ProjectDetailView from "@/components/ProjectDetailView";
+import ProjectSectionsLanding from "@/components/ProjectSectionsLanding";
 import ProjectCreationWizard, { ProjectInfo } from "@/components/ProjectCreationWizard";
 import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanWizard";
 import DocumentUploadFlow from "@/components/DocumentUploadFlow";
@@ -51,7 +52,7 @@ export default function Home() {
     saveProject(newProject);
     setShowWizard(false);
     setSelectedProject(newProject);
-    setCurrentView("project-detail");
+    setCurrentView("sections-landing");
   };
 
   if (loading) {
@@ -106,7 +107,28 @@ export default function Home() {
         {currentView === "home" ? (
           <ProjectGrid onAppClick={handleAppClick} />
         ) : currentView === "project-list" ? (
-          <ProjectListView projects={projects} onCreateProject={() => setShowWizard(true)} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("project-detail"); }} onDocUpload={() => setShowDocUpload(true)} />
+          <ProjectListView projects={projects} onCreateProject={() => { setSelectedProject(null); setCurrentView("sections-landing"); }} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("sections-landing"); }} onDocUpload={() => setShowDocUpload(true)} />
+        ) : currentView === "sections-landing" ? (
+          <ProjectSectionsLanding
+            project={selectedProject}
+            onBack={() => { setCurrentView("project-list"); setSelectedProject(null); }}
+            onSectionClick={(section) => {
+              if (section === "detail" && selectedProject) {
+                setCurrentView("project-detail");
+              } else if (section === "team" && selectedProject) {
+                setCurrentView("project-detail");
+              } else if (section === "business" && selectedProject) {
+                if (!selectedProject.businessPlan) {
+                  setShowBusinessPlan(true);
+                } else {
+                  setCurrentView("project-detail");
+                }
+              } else if (section === "tasks" && selectedProject) {
+                setCurrentView("project-detail");
+              }
+            }}
+            onCreateProject={() => setShowWizard(true)}
+          />
         ) : currentView === "project-detail" && selectedProject ? (
           <ProjectDetailView
             project={selectedProject}
