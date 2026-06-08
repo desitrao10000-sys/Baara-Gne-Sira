@@ -229,25 +229,26 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                             <Calculator size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Résumé financier</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2.5 justify-items-center">
-                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Invest. total</p>
-                                                <p className="text-xl font-black text-white">{investTotal > 0 ? fmt(investTotal) : "—"}</p>
-                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
+                                        <div className="grid grid-cols-2 gap-3 justify-items-center">
+                                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">💰 Invest. total</p>
+                                                <p className="text-2xl font-black text-white leading-tight">{investTotal > 0 ? fmt(investTotal) : "—"}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">FCFA</p>
                                             </div>
-                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Financement</p>
-                                                <p className="text-xl font-black text-white">{finTotal > 0 ? fmt(finTotal) : "—"}</p>
-                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
+                                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">🏦 Financement</p>
+                                                <p className="text-2xl font-black text-white leading-tight">{finTotal > 0 ? fmt(finTotal) : "—"}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">FCFA</p>
                                             </div>
-                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Taux actualisation</p>
-                                                <p className="text-xl font-black text-yellow-300">{tauxActu > 0 ? `${tauxActu.toFixed(1)}%` : "—"}</p>
+                                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">📊 Taux actualisation</p>
+                                                <p className="text-2xl font-black text-yellow-300 leading-tight">{tauxActu > 0 ? `${tauxActu.toFixed(1)}%` : "—"}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">taux mixé</p>
                                             </div>
-                                            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">Amort./an</p>
-                                                <p className="text-xl font-black text-white">{amortAnnuel > 0 ? fmt(amortAnnuel) : "—"}</p>
-                                                <p className="text-[10px] text-white/50 font-semibold">FCFA</p>
+                                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">🔄 Amort./an</p>
+                                                <p className="text-2xl font-black text-white leading-tight">{amortAnnuel > 0 ? fmt(amortAnnuel) : "—"}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">FCFA</p>
                                             </div>
                                         </div>
                                     </div>
@@ -260,30 +261,30 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                             <BarChart3 size={18} className="text-yellow-300" />
                                             <span className="text-white font-black text-base">Indicateurs de rentabilité</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2.5 justify-items-center">
-                                            <div className={`rounded-2xl p-3 text-center ${van >= 0 ? "bg-green-500/20 border border-green-400/30" : "bg-red-500/20 border border-red-400/30"}`}>
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">VAN</p>
-                                                <p className={`text-xl font-black ${van >= 0 ? "text-green-300" : "text-red-300"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p>
-                                                <p className="text-[10px] text-white/50">{van >= 0 ? "✅ Rentable" : "⚠️ Non rent."}</p>
+                                        <div className="grid grid-cols-2 gap-3 justify-items-center">
+                                            <div className={`rounded-2xl p-3.5 text-center w-full ${van >= 0 ? "bg-green-500/15 border border-green-400/25" : "bg-red-500/15 border border-red-400/25"}`}>
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">📈 VAN</p>
+                                                <p className={`text-2xl font-black leading-tight ${van >= 0 ? "text-green-300" : "text-red-300"}`}>{van >= 0 ? "+" : ""}{fmt(van)}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">{van >= 0 ? "✅ Rentable" : "⚠️ Non rentable"}</p>
                                             </div>
-                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">TRI</p>
-                                                <p className="text-xl font-black text-yellow-300">{tri.toFixed(1)}%</p>
-                                                <p className="text-[10px] text-white/50">Taux rentabilité</p>
+                                            <div className="bg-white/10 rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">📊 TRI</p>
+                                                <p className="text-2xl font-black text-yellow-300 leading-tight">{tri.toFixed(1)}%</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">Taux rentabilité</p>
                                             </div>
-                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">ROI</p>
-                                                <p className="text-xl font-black text-white">{roi.toFixed(1)}%</p>
-                                                <p className="text-[10px] text-white/50">Retour invest.</p>
+                                            <div className="bg-white/10 rounded-2xl p-3.5 text-center border border-white/10 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">💹 ROI</p>
+                                                <p className="text-2xl font-black text-white leading-tight">{roi.toFixed(1)}%</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">Retour investissement</p>
                                             </div>
-                                            <div className={`rounded-2xl p-3 text-center ${ip >= 1 ? "bg-green-500/20 border border-green-400/30" : "bg-red-500/20 border border-red-400/30"}`}>
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">IP</p>
-                                                <p className={`text-xl font-black ${ip >= 1 ? "text-green-300" : "text-red-300"}`}>{ip.toFixed(2)}</p>
-                                                <p className="text-[10px] text-white/50">{ip >= 1 ? "✅ IP≥1" : "⚠️ IP<1"}</p>
+                                            <div className={`rounded-2xl p-3.5 text-center w-full ${ip >= 1 ? "bg-green-500/15 border border-green-400/25" : "bg-red-500/15 border border-red-400/25"}`}>
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">📋 IP</p>
+                                                <p className={`text-2xl font-black leading-tight ${ip >= 1 ? "text-green-300" : "text-red-300"}`}>{ip.toFixed(2)}</p>
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">{ip >= 1 ? "✅ IP≥1" : "⚠️ IP<1"}</p>
                                             </div>
-                                            <div className="bg-white/10 rounded-2xl p-3 text-center border border-white/20 col-span-2">
-                                                <p className="text-[11px] text-white/60 font-bold uppercase tracking-wide">⏱ Délai de récupération</p>
-                                                <p className="text-2xl font-black text-white">{delaiRecup > 0 ? `${delaiRecup} an(s)` : "Non atteint"}</p>
+                                            <div className="bg-gradient-to-r from-indigo-500/20 to-blue-500/20 rounded-2xl p-3.5 text-center border border-indigo-300/20 col-span-2 w-full">
+                                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider mb-1">⏱ Délai de récupération</p>
+                                                <p className="text-3xl font-black text-white leading-tight">{delaiRecup > 0 ? `${delaiRecup} an(s)` : "Non atteint"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -433,26 +434,26 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                                     <span className="text-xs font-black text-white/80 uppercase">Année {r.annee}</span>
                                                     <span className="text-sm font-black text-white">CA : {fmt(r.ca)} FCFA</span>
                                                 </div>
-                                                <div className="p-3 grid grid-cols-2 gap-2 justify-items-center">
-                                                    <div className="bg-slate-50 rounded-xl p-2 text-center">
-                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Marge brute</p>
-                                                        <p className="text-sm font-black text-slate-900">{fmt(r.margeBrute)}</p>
+                                                <div className="p-3 grid grid-cols-2 gap-2.5 justify-items-center">
+                                                    <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-xl p-2.5 text-center border border-slate-200/50 w-full">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marge brute</p>
+                                                        <p className="text-base font-black text-slate-900 mt-0.5">{fmt(r.margeBrute)}</p>
                                                     </div>
-                                                    <div className="bg-slate-50 rounded-xl p-2 text-center">
-                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Bénéfice Avant Impôt</p>
-                                                        <p className={`text-sm font-black ${r.bai >= 0 ? "text-slate-900" : "text-red-600"}`}>{fmt(r.bai)}</p>
+                                                    <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-xl p-2.5 text-center border border-slate-200/50 w-full">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">BAI</p>
+                                                        <p className={`text-base font-black mt-0.5 ${r.bai >= 0 ? "text-slate-900" : "text-red-600"}`}>{fmt(r.bai)}</p>
                                                     </div>
-                                                    <div className="bg-red-50 rounded-xl p-2 text-center">
-                                                        <p className="text-[10px] font-bold text-red-500 uppercase">Impôt</p>
-                                                        <p className="text-sm font-black text-red-700">{fmt(r.impot)}</p>
+                                                    <div className="bg-gradient-to-br from-red-50 to-orange-50/50 rounded-xl p-2.5 text-center border border-red-100/50 w-full">
+                                                        <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Impôt</p>
+                                                        <p className="text-base font-black text-red-600 mt-0.5">{fmt(r.impot)}</p>
                                                     </div>
-                                                    <div className={`rounded-xl p-2 text-center ${r.benefNet >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-                                                        <p className="text-[10px] font-bold uppercase text-slate-500">Bénéfice net</p>
-                                                        <p className={`text-sm font-black ${r.benefNet >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(r.benefNet)}</p>
+                                                    <div className={`rounded-xl p-2.5 text-center border w-full ${r.benefNet >= 0 ? "bg-gradient-to-br from-green-50 to-emerald-50/50 border-green-100/50" : "bg-gradient-to-br from-red-50 to-rose-50/50 border-red-100/50"}`}>
+                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bénéfice net</p>
+                                                        <p className={`text-base font-black mt-0.5 ${r.benefNet >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(r.benefNet)}</p>
                                                     </div>
-                                                    <div className="bg-blue-50 rounded-xl p-2 text-center col-span-2">
-                                                        <p className="text-[10px] font-bold text-blue-500 uppercase">Flux Net de Trésorerie Actualisé</p>
-                                                        <p className="text-sm font-black text-blue-700">{fmt(r.fntActu)} FCFA</p>
+                                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 text-center border border-blue-100/50 col-span-2 w-full">
+                                                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Flux Net de Trésorerie Actualisé</p>
+                                                        <p className="text-lg font-black text-blue-700 mt-0.5">{fmt(r.fntActu)} <span className="text-xs font-bold text-blue-400">FCFA</span></p>
                                                     </div>
                                                 </div>
                                             </div>
