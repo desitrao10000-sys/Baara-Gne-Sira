@@ -156,24 +156,19 @@ body {
   word-wrap: break-word;
 }
 
-/* Textes longs justifiés */
-p,
-li,
-td,
-th {
+/* Textes longs justifiés — uniquement pour les paragraphes de description longues */
+.prose p,
+.prose li {
   overflow-wrap: break-word;
   word-break: break-word;
   text-align: justify;
 }
 
-/* Titres centrés */
-h1,
-h2,
-h3 {
-  text-align: center;
-}
-
-/* Divs : juste anti-débordement, pas de justify (casserait les layouts) */
+/* Anti-débordement global pour p, li, td, th — SANS justify pour ne pas casser les UI */
+p,
+li,
+td,
+th,
 div {
   overflow-wrap: break-word;
   word-break: break-word;
