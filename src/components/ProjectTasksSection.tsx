@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Check, X, AlertTriangle, ChevronDown, ChevronUp, ClipboardList, Calendar, User, TrendingUp, TrendingDown, MessageSquare, ShieldAlert } from "lucide-react";
 import { ProjectTask, BudgetItem } from "@/lib/useSupabaseProjects";
+import EntryPaymentHelper from "./EntryPaymentHelper";
 
 interface Props {
     tasks: ProjectTask[] | undefined;
@@ -423,7 +424,37 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                     </div>
 
                     {/* Budget prévisionnel */}
-                    {renderBudgetEditor("Budget prévisionnel — Entrées", <TrendingUp size={12} className="text-blue-600" />, "bg-blue-50", "border-blue-200", "budgetEntreesPrev", "Entrées prévues (paiements clients / fonds portefeuille)", "text-green-700", "+")}
+                    <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 space-y-3">
+                        <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1"><TrendingUp size={12} className="text-blue-600" /> Budget prévisionnel — Entrées</p>
+                        <p className="text-[11px] font-semibold text-slate-500">Entrées prévues (paiements clients / fonds portefeuille)</p>
+                        {/* Helper Paiement Client / Fonds Portefeuille */}
+                        <EntryPaymentHelper onValidate={(items) => {
+                            const newItems = items.map(it => ({ id: crypto.randomUUID(), designation: it.designation, montant: it.montant }));
+                            setForm({ ...form, budgetEntreesPrev: [...form.budgetEntreesPrev, ...newItems] });
+                        }} />
+                        {/* Lignes manuelles */}
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-[1fr_110px_28px] gap-1.5 items-center">
+                                <span className="text-[10px] font-black text-slate-500 uppercase">Désignation</span>
+                                <span className="text-[10px] font-black text-slate-500 uppercase">Montant</span>
+                                <span></span>
+                            </div>
+                            {form.budgetEntreesPrev.map((item: BudgetItem) => (
+                                <div key={item.id} className="grid grid-cols-[1fr_110px_28px] gap-1.5 items-center">
+                                    <input type="text" value={item.designation} onChange={(e) => updateItem("budgetEntreesPrev", item.id, "designation", e.target.value)} placeholder="Désignation..." className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-400" />
+                                    <input type="text" inputMode="numeric" value={item.montant || ""} onChange={(e) => updateItem("budgetEntreesPrev", item.id, "montant", e.target.value)} placeholder="0" className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 outline-none focus:border-blue-400" />
+                                    <button onClick={() => removeItem("budgetEntreesPrev", item.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
+                                </div>
+                            ))}
+                            <button onClick={() => addItem("budgetEntreesPrev")} className="w-full py-1.5 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 text-[11px] font-bold flex items-center justify-center gap-1"><Plus size={12} /> Ajouter une ligne</button>
+                            {form.budgetEntreesPrev.length > 0 && (
+                                <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                                    <span className="font-black text-slate-700">Total</span>
+                                    <span className="font-black text-green-700">+{fmt(sumItems(form.budgetEntreesPrev))} FCFA</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                     {renderBudgetEditor("Budget prévisionnel — Sorties", <TrendingDown size={12} className="text-blue-600" />, "bg-blue-50", "border-blue-200", "budgetSortiesPrev", "Sorties prévues (dépenses total prévisionnel pour la tache)", "text-red-600", "-")}
 
                     {/* Solde prévisionnel */}
