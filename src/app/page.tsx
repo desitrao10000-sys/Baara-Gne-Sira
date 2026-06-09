@@ -8,6 +8,7 @@ import ProjectView from "@/components/ProjectView";
 import ProjectDetailView from "@/components/ProjectDetailView";
 import ProjectSectionsLanding from "@/components/ProjectSectionsLanding";
 import SectionTeamView from "@/components/SectionTeamView";
+import SectionDetailView from "@/components/SectionDetailView";
 import SectionTasksView from "@/components/SectionTasksView";
 import ProjectCreationWizard, { ProjectInfo } from "@/components/ProjectCreationWizard";
 import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanWizard";
@@ -119,7 +120,7 @@ export default function Home() {
               if (section === "team" && selectedProject) {
                 setCurrentView("section-team");
               } else if (section === "detail" && selectedProject) {
-                setCurrentView("project-detail");
+                setCurrentView("section-detail");
               } else if (section === "business" && selectedProject) {
                 setShowBusinessPlan(true);
               } else if (section === "tasks" && selectedProject) {
@@ -127,6 +128,21 @@ export default function Home() {
               }
             }}
             onCreateProject={() => setShowWizard(true)}
+          />
+        ) : currentView === "section-detail" && selectedProject ? (
+          <SectionDetailView
+            project={selectedProject}
+            onBack={() => setCurrentView("sections-landing")}
+            onSave={async (updatedInfo: ProjectInfo) => {
+              const updated = { ...selectedProject, info: updatedInfo };
+              await saveProject(updated);
+              setSelectedProject(updated);
+            }}
+            onDelete={async (projectId: string) => {
+              await deleteProject(projectId);
+              setSelectedProject(null);
+              setCurrentView("project-list");
+            }}
           />
         ) : currentView === "section-team" && selectedProject ? (
           <SectionTeamView
