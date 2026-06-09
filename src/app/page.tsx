@@ -249,6 +249,15 @@ function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUplo
   const sectorLabels: Record<string, string> = { commerce: "🛒 Commerce", agriculture: "🌾 Agriculture", service: "💼 Service", industrie: "🏭 Industrie", elevage: "🐄 Élevage", artisanat: "🪵 Artisanat", transport: "🚚 Transport", technologie: "💻 Technologie", sante: "🏥 Santé", education: "📚 Éducation", restauration: "🍽️ Restauration", batiment: "🏗️ Bâtiment" };
   const durationLabels: Record<string, string> = { "3-mois": "3 mois", "6-mois": "6 mois", "1-an": "1 an", "2-ans": "2 ans", "3-ans": "3 ans", "5-ans": "5 ans", "10-ans": "10 ans" };
 
+  const getProgress = (p: Project) => {
+    let c = 0;
+    if (p.manager) c++;
+    if (p.info.name) c++;
+    if (p.businessPlan) c++;
+    if (p.tasks && p.tasks.length > 0) c++;
+    return c;
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-5 slide-in">
       <div className="bg-white rounded-[25px] p-5 shadow-md border border-slate-200 mb-5">
@@ -258,14 +267,12 @@ function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUplo
           <PlusCircle size={20} /> Créer un Nouveau Projet
         </button>
 
-        {/* Séparateur OU */}
         <div className="flex items-center gap-3 my-4">
           <div className="h-px flex-1 bg-slate-200" />
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ou</span>
           <div className="h-px flex-1 bg-slate-200" />
         </div>
 
-        {/* Remplissage par document */}
         <button onClick={onDocUpload} className="w-full py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-transform">
           <Sparkles size={20} className="text-yellow-300" /> Remplissage Projet / Plan d'affaire par document
         </button>
@@ -276,20 +283,55 @@ function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUplo
         <div className="mt-2">
           <h3 className="text-lg font-black text-slate-800 mb-4 ml-2">Projets créés ({projects.length})</h3>
           <div className="space-y-3">
-            {projects.map((project) => (
-              <button key={project.id} onClick={() => onSelectProject(project)} className="w-full bg-white p-4 px-5 rounded-2xl flex items-center gap-4 shadow-md border-l-4 border-[var(--vibrant-blue)] active:scale-[0.98] transition-transform text-left border-y border-r border-slate-200">
-                <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0"><FolderKanban size={24} className="text-blue-700" /></div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-black text-slate-900 block truncate">{project.info.name}</span>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-slate-700 font-bold">{sectorLabels[project.info.sector] || project.info.sector}</span>
-                    {project.info.location && <span className="text-xs text-slate-600 font-semibold flex items-center gap-1"><MapPin size={10} />{project.info.location}</span>}
-                    {project.info.duration && <span className="text-xs text-slate-600 font-semibold flex items-center gap-1"><Calendar size={10} />{durationLabels[project.info.duration] || project.info.duration}</span>}
+            {projects.map((project) => {
+              const progress = getProgress(project);
+              return (
+                <button key={project.id} onClick={() => onSelectProject(project)} className="w-full bg-white rounded-2xl shadow-md border border-slate-200 active:scale-[0.98] transition-transform text-left overflow-hidden">
+                  {/* Top bar */}
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0"><FolderKanban size={20} className="text-white" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-white truncate">{project.info.name || "Projet sans nom"}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-white/70 font-bold">{sectorLabels[project.info.sector] || project.info.sector}</span>
+                        {project.info.location && <span className="text-[10px] text-white/60 font-semibold flex items-center gap-0.5"><MapPin size={8} />{project.info.location}</span>}
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-white/50 shrink-0" />
                   </div>
-                </div>
-                <ChevronRight size={20} className="text-slate-400 shrink-0" />
-              </button>
-            ))}
+                  {/* Info body */}
+                  <div className="px-4 py-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${project.manager ? "bg-green-500" : "bg-slate-300"}`} />
+                        <span className="text-slate-600 font-semibold">Équipe : {project.manager ? project.manager.nomComplet || "Défini" : "Vide"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${project.businessPlan ? "bg-green-500" : "bg-slate-300"}`} />
+                        <span className="text-slate-600 font-semibold">Plan chiffré : {project.businessPlan ? "✅" : "❌"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${project.tasks && project.tasks.length > 0 ? "bg-green-500" : "bg-slate-300"}`} />
+                        <span className="text-slate-600 font-semibold">Tâches : {project.tasks?.length || 0}</span>
+                      </div>
+                      {project.info.duration && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={10} className="text-slate-400 shrink-0" />
+                          <span className="text-slate-600 font-semibold">{durationLabels[project.info.duration] || project.info.duration}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Progress bar */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-amber-400 to-green-500 rounded-full transition-all duration-500" style={{ width: `${(progress / 4) * 100}%` }} />
+                      </div>
+                      <span className="text-[10px] font-black text-slate-500">{progress}/4</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
