@@ -40,19 +40,23 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
     const total2Combined = total2Payments + total2PF;
     const totalGeneral = total2Combined - total1;
 
-    // Validate: send items to parent
+    // Validate: send items to parent — only active section
     const handleValidate = () => {
         const items: { designation: string; montant: number }[] = [];
 
-        // Add payment items
-        payments.forEach(p => {
-            if (p.montant > 0) items.push({ designation: p.designation || "Paiement client", montant: p.montant });
-        });
+        if (showPC) {
+            // Only Paiement Client
+            payments.forEach(p => {
+                if (p.montant > 0) items.push({ designation: p.designation || "Paiement client", montant: p.montant });
+            });
+        }
 
-        // Add portefeuille withdrawals
-        pfWithdraws.forEach((w, i) => {
-            if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
-        });
+        if (showFP) {
+            // Only Fonds Portefeuille
+            pfWithdraws.forEach((w, i) => {
+                if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
+            });
+        }
 
         if (items.length > 0) onValidate(items);
     };
