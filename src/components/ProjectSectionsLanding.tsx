@@ -124,19 +124,17 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                 {/* 4 Cartes de sections */}
                 <div className="space-y-3">
                     {sections.map((section) => {
-                        const canClick = hasProject || section.id === "detail";
                         return (
                             <button
                                 key={section.id}
                                 onClick={() => {
-                                    if (!canClick) return;
-                                    if (!hasProject && section.id === "detail") {
+                                    if (!hasProject) {
                                         onCreateProject();
-                                    } else if (hasProject) {
+                                    } else {
                                         onSectionClick(section.id);
                                     }
                                 }}
-                                className={`w-full rounded-2xl overflow-hidden shadow-lg ${section.shadowColor} border ${section.borderColor} transition-transform text-left ${canClick ? "active:scale-[0.98]" : "opacity-50 cursor-not-allowed"}`}
+                                className={`w-full rounded-2xl overflow-hidden shadow-lg ${section.shadowColor} border ${section.borderColor} active:scale-[0.98] transition-transform text-left`}
                             >
                                 {/* Barre de titre colorée */}
                                 <div className={`bg-gradient-to-r ${section.bgColor} px-4 py-3 flex items-center gap-3`}>
@@ -159,7 +157,7 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                                     <p className="text-xs font-semibold text-slate-500 leading-relaxed">{section.description}</p>
                                     <div className="flex items-center justify-between mt-2">
                                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${section.badgeColor}`}>
-                                            {section.completed ? "✅ Complété" : canClick ? "📝 À compléter" : "🔒 Créez d'abord le projet"}
+                                            {section.completed ? "✅ Complété" : "📝 À compléter"}
                                         </span>
                                     </div>
                                 </div>
