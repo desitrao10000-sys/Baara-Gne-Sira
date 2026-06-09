@@ -139,6 +139,13 @@ export default function Home() {
               }
             }}
             onCreateProject={() => setShowWizard(true)}
+            onFinish={async () => {
+              if (selectedProject) {
+                await saveProject(selectedProject);
+              }
+              setSelectedProject(null);
+              setCurrentView("project-list");
+            }}
             onDelete={async (projectId: string) => {
               await deleteProject(projectId);
               setSelectedProject(null);
