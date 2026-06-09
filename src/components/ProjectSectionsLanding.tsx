@@ -121,18 +121,6 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                     )}
                 </div>
 
-                {/* Bouton Créer le projet si pas encore créé */}
-                {!hasProject && (
-                    <button
-                        onClick={onCreateProject}
-                        className="w-full mb-4 p-5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-white font-bold text-sm flex items-center justify-center gap-3 shadow-lg shadow-amber-500/30 active:scale-95 transition-transform"
-                    >
-                        <FileText size={22} />
-                        <span className="font-black text-base">Créer le Détail du Projet</span>
-                        <ChevronRight size={20} />
-                    </button>
-                )}
-
                 {/* 4 Cartes de sections — toujours cliquables */}
                 <div className="space-y-3">
                     {sections.map((section) => {

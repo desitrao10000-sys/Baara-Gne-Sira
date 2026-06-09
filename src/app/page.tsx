@@ -93,8 +93,9 @@ export default function Home() {
           await saveBusinessPlan(selectedProject.id, bpData);
           setSelectedProject((prev) => prev ? { ...prev, businessPlan: JSON.stringify(bpData) } : null);
           setShowBusinessPlan(false);
+          setCurrentView("sections-landing");
         }}
-        onBack={() => setShowBusinessPlan(false)}
+        onBack={() => { setShowBusinessPlan(false); setCurrentView("sections-landing"); }}
       />
     );
   }
@@ -118,11 +119,7 @@ export default function Home() {
               } else if (section === "team" && selectedProject) {
                 setCurrentView("project-detail");
               } else if (section === "business" && selectedProject) {
-                if (!selectedProject.businessPlan) {
-                  setShowBusinessPlan(true);
-                } else {
-                  setCurrentView("project-detail");
-                }
+                setShowBusinessPlan(true);
               } else if (section === "tasks" && selectedProject) {
                 setCurrentView("project-detail");
               }
@@ -132,7 +129,7 @@ export default function Home() {
         ) : currentView === "project-detail" && selectedProject ? (
           <ProjectDetailView
             project={selectedProject}
-            onBack={() => { setCurrentView("project-list"); setSelectedProject(null); }}
+            onBack={() => { setCurrentView("sections-landing"); }}
             onSave={async (updatedInfo: ProjectInfo) => {
               const updated = { ...selectedProject, info: updatedInfo };
               await saveProject(updated);
