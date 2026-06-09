@@ -11,6 +11,7 @@ export interface ProjectInfo {
     duration: string;
     description: string;
     objectives: string;
+    clientsJson?: string; // Liste des clients (JSON)
 }
 
 export interface ProjectMember {

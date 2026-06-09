@@ -4,8 +4,38 @@ import { useState } from "react";
 import {
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, MapPin, Globe2,
     Calendar, Clock, FileText, Target, Pencil, Lightbulb, Send, X, FolderKanban,
+    UserPlus, Phone, Home, ShoppingBag, CreditCard, Eye, Plus, Trash2, Users,
 } from "lucide-react";
 import { Project, ProjectInfo } from "@/lib/useSupabaseProjects";
+
+// ─── Interface Client ──────────────────────────────────
+interface ClientInfo {
+    id: string;
+    // Identification
+    nom: string;
+    telephone: string;
+    adresse: string;
+    // Profil commercial
+    typeClient: string;
+    produitsHabituels: string;
+    frequenceAchat: string;
+    montantMoyen: string;
+    modePaiement: string;
+    // Gestion crédit
+    plafondAutorise: string;
+    montantEnCours: string;
+    dateOctroi: string;
+    echeance: string;
+    garant: string;
+    garantContact: string;
+    // Observations
+    profession: string;
+    fiabilite: string;
+    notes: string;
+}
+function emptyClient(): ClientInfo {
+    return { id: crypto.randomUUID(), nom: "", telephone: "", adresse: "", typeClient: "", produitsHabituels: "", frequenceAchat: "", montantMoyen: "", modePaiement: "", plafondAutorise: "", montantEnCours: "", dateOctroi: "", echeance: "", garant: "", garantContact: "", profession: "", fiabilite: "", notes: "" };
+}
 
 interface SectionDetailViewProps {
     project: Project;
@@ -157,6 +187,11 @@ const steps: StepDef[] = [
             { value: "Exporter vers les pays voisins sous 2 ans", label: "🌐 Export sous-régional" },
         ],
     },
+    {
+        id: "clientsJson", title: "Ajoutez vos clients", subtitle: "Fiche client détaillée (optionnel — vous pouvez passer)",
+        type: "textarea", icon: <Users size={32} className="text-primary-yellow" />,
+        placeholder: "", suggestions: [],
+    },
 ];
 
 // ─── Composant principal ────────────────────────────────
@@ -169,16 +204,52 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const [helpResponse, setHelpResponse] = useState<string | null>(null);
     const [helpLoading, setHelpLoading] = useState(false);
 
+    // ─── Clients State ───
+    const [clients, setClients] = useState<ClientInfo[]>(() => {
+        try { return form.clientsJson ? JSON.parse(form.clientsJson) : []; } catch { return []; }
+    });
+    const [showClientForm, setShowClientForm] = useState(false);
+    const [clientForm, setClientForm] = useState<ClientInfo>(emptyClient());
+    const [editClientId, setEditClientId] = useState<string | null>(null);
+
+    const isClientStep = steps[step]?.id === "clientsJson";
     const currentStep = steps[step];
     const totalSteps = steps.length;
     const progress = ((step + 1) / totalSteps) * 100;
-    const currentValue = form[currentStep.id];
+    const currentValue = form[currentStep?.id] ?? "";
 
     const updateField = (value: string) => {
         setForm((prev) => ({ ...prev, [currentStep.id]: value }));
     };
 
-    const canGoNext = () => currentValue.trim() !== "";
+    const canGoNext = () => isClientStep || currentValue.trim() !== "";
+
+    const saveClientsToForm = (updatedClients: ClientInfo[]) => {
+        setClients(updatedClients);
+        setForm((prev) => ({ ...prev, clientsJson: JSON.stringify(updatedClients) }));
+    };
+
+    const saveClientForm = () => {
+        if (!clientForm.nom.trim()) return;
+        if (editClientId) {
+            saveClientsToForm(clients.map(c => c.id === editClientId ? clientForm : c));
+        } else {
+            saveClientsToForm([...clients, clientForm]);
+        }
+        setClientForm(emptyClient());
+        setShowClientForm(false);
+        setEditClientId(null);
+    };
+
+    const removeClient = (id: string) => saveClientsToForm(clients.filter(c => c.id !== id));
+
+    const startEditClient = (c: ClientInfo) => {
+        setClientForm({ ...c });
+        setEditClientId(c.id);
+        setShowClientForm(true);
+    };
+
+    const cancelClientForm = () => { setShowClientForm(false); setClientForm(emptyClient()); setEditClientId(null); };
 
     const resetHelp = () => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); };
 
@@ -267,69 +338,149 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                     <h2 className="text-xl font-black text-text-dark text-center mb-1 leading-tight">{currentStep.title}</h2>
                     <p className="text-center text-slate-500 text-xs font-semibold mb-5">{currentStep.subtitle}</p>
 
-                    {/* Suggestions */}
-                    {currentStep.suggestions.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">💡 Choisissez une proposition ou tapez votre propre réponse :</p>
-                            <div className="flex flex-wrap gap-2">
-                                {currentStep.suggestions.map((sug) => (
-                                    <button key={sug.value} onClick={() => updateField(sug.value)} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${currentValue === sug.value ? "border-vibrant-blue bg-blue-50 text-vibrant-blue shadow-md shadow-blue-500/20" : "border-slate-200 bg-white text-slate-600"}`}>
-                                        {sug.label}
-                                    </button>
-                                ))}
-                            </div>
+                    {isClientStep ? (
+                        /* ═══════ FORMULAIRE CLIENT ═══════ */
+                        <div className="space-y-2.5 flex-1">
+                            {clients.map((c) => (
+                                <div key={c.id} className="bg-white rounded-xl p-2.5 border border-slate-200 shadow-sm">
+                                    <div className="flex items-start justify-between gap-1">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-black text-slate-900">{c.nom}</p>
+                                            {c.telephone && <p className="text-[10px] text-slate-500">📞 {c.telephone}</p>}
+                                            {c.typeClient && <p className="text-[10px] text-blue-600 font-semibold">{c.typeClient}</p>}
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => startEditClient(c)} title="Modifier" className="p-1 rounded-lg bg-blue-50 hover:bg-blue-100"><Pencil size={11} className="text-blue-600" /></button>
+                                            <button onClick={() => removeClient(c.id)} title="Supprimer" className="p-1 rounded-lg bg-red-50 hover:bg-red-100"><Trash2 size={11} className="text-red-500" /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {clients.length === 0 && !showClientForm && <p className="text-[11px] text-slate-400 text-center py-2 italic">Aucun client. Vous pouvez passer cette étape.</p>}
+                            {showClientForm ? (
+                                <div className="bg-teal-50 rounded-xl p-2.5 border border-teal-200 space-y-2">
+                                    <p className="text-[10px] font-black text-teal-700 uppercase tracking-wider">{editClientId ? "✏️ Modifier" : "➕ Nouveau client"}</p>
+                                    {/* Identification */}
+                                    <div className="bg-white rounded-lg p-2 border border-teal-100 space-y-1.5">
+                                        <p className="text-[9px] font-black text-teal-600 uppercase">🪪 Identification</p>
+                                        <input type="text" value={clientForm.nom} onChange={(e) => setClientForm({ ...clientForm, nom: e.target.value })} placeholder="Nom complet *" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input type="text" value={clientForm.telephone} onChange={(e) => setClientForm({ ...clientForm, telephone: e.target.value })} placeholder="📞 Téléphone" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
+                                            <input type="text" value={clientForm.adresse} onChange={(e) => setClientForm({ ...clientForm, adresse: e.target.value })} placeholder="📍 Adresse" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
+                                        </div>
+                                    </div>
+                                    {/* Profil Commercial */}
+                                    <div className="bg-white rounded-lg p-2 border border-blue-100 space-y-1.5">
+                                        <p className="text-[9px] font-black text-blue-600 uppercase">🛒 Profil Commercial</p>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input type="text" value={clientForm.typeClient} onChange={(e) => setClientForm({ ...clientForm, typeClient: e.target.value })} placeholder="Type de client" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                            <input type="text" value={clientForm.produitsHabituels} onChange={(e) => setClientForm({ ...clientForm, produitsHabituels: e.target.value })} placeholder="Produits habituels" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <input type="text" value={clientForm.frequenceAchat} onChange={(e) => setClientForm({ ...clientForm, frequenceAchat: e.target.value })} placeholder="Fréquence achat" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                            <input type="text" value={clientForm.montantMoyen} onChange={(e) => setClientForm({ ...clientForm, montantMoyen: e.target.value })} placeholder="Montant moyen" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                            <input type="text" value={clientForm.modePaiement} onChange={(e) => setClientForm({ ...clientForm, modePaiement: e.target.value })} placeholder="Mode paiement" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                        </div>
+                                    </div>
+                                    {/* Gestion Crédit */}
+                                    <div className="bg-white rounded-lg p-2 border border-amber-100 space-y-1.5">
+                                        <p className="text-[9px] font-black text-amber-600 uppercase">💳 Gestion Crédit</p>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input type="text" value={clientForm.plafondAutorise} onChange={(e) => setClientForm({ ...clientForm, plafondAutorise: e.target.value })} placeholder="Plafond autorisé" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                            <input type="text" value={clientForm.montantEnCours} onChange={(e) => setClientForm({ ...clientForm, montantEnCours: e.target.value })} placeholder="Montant en cours" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                            <input type="date" value={clientForm.dateOctroi} onChange={(e) => setClientForm({ ...clientForm, dateOctroi: e.target.value })} title="Date d'octroi" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                            <input type="date" value={clientForm.echeance} onChange={(e) => setClientForm({ ...clientForm, echeance: e.target.value })} title="Échéance" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input type="text" value={clientForm.garant} onChange={(e) => setClientForm({ ...clientForm, garant: e.target.value })} placeholder="Garant (nom)" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                            <input type="text" value={clientForm.garantContact} onChange={(e) => setClientForm({ ...clientForm, garantContact: e.target.value })} placeholder="Contact garant" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                        </div>
+                                    </div>
+                                    {/* Observations */}
+                                    <div className="bg-white rounded-lg p-2 border border-purple-100 space-y-1.5">
+                                        <p className="text-[9px] font-black text-purple-600 uppercase">📝 Observations</p>
+                                        <input type="text" value={clientForm.profession} onChange={(e) => setClientForm({ ...clientForm, profession: e.target.value })} placeholder="Profession" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400" />
+                                        <input type="text" value={clientForm.fiabilite} onChange={(e) => setClientForm({ ...clientForm, fiabilite: e.target.value })} placeholder="Fiabilité / Réputation" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400" />
+                                        <textarea value={clientForm.notes} onChange={(e) => setClientForm({ ...clientForm, notes: e.target.value })} placeholder="Notes particulières..." rows={2} className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400 resize-none" />
+                                    </div>
+                                    {/* Boutons */}
+                                    <div className="flex gap-2">
+                                        <button onClick={saveClientForm} disabled={!clientForm.nom.trim()} className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${clientForm.nom.trim() ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}><Check size={13} /> {editClientId ? "Mettre à jour" : "Ajouter"}</button>
+                                        <button onClick={cancelClientForm} className="flex-1 py-2 bg-white text-slate-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 border border-slate-200"><X size={13} /> Annuler</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => setShowClientForm(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-teal-300 text-teal-500 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-50"><Plus size={14} /> Ajouter un client</button>
+                            )}
                         </div>
+                    ) : (
+                        /* ═══════ ÉTAPES NORMALES ═══════ */
+                        <>
+                            {/* Suggestions */}
+                            {currentStep.suggestions.length > 0 && (
+                                <div className="mb-4">
+                                    <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">💡 Choisissez une proposition ou tapez votre propre réponse :</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {currentStep.suggestions.map((sug) => (
+                                            <button key={sug.value} onClick={() => updateField(sug.value)} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${currentValue === sug.value ? "border-vibrant-blue bg-blue-50 text-vibrant-blue shadow-md shadow-blue-500/20" : "border-slate-200 bg-white text-slate-600"}`}>
+                                                {sug.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Aide IA */}
+                            <div className="mb-3">
+                                {!showHelp ? (
+                                    <button onClick={() => { setShowHelp(true); setHelpQuery(""); setHelpResponse(null); }} className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-xs font-bold text-amber-600 flex items-center justify-center gap-2 transition-colors active:scale-95">
+                                        <Lightbulb size={14} /> 💡 Obtenir de l'aide IA
+                                    </button>
+                                ) : (
+                                    <div className="bg-amber-50 rounded-xl border-2 border-amber-200 overflow-hidden">
+                                        <div className="bg-amber-100/80 px-3 py-1.5 flex items-center justify-between border-b border-amber-200">
+                                            <div className="flex items-center gap-1.5">
+                                                <Lightbulb size={12} className="text-primary-yellow" />
+                                                <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Assistant IA</span>
+                                            </div>
+                                            <button onClick={() => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); }} className="text-amber-400 hover:text-amber-600" title="Fermer"><X size={12} /></button>
+                                        </div>
+                                        <div className="p-2.5">
+                                            <div className="flex gap-1.5">
+                                                <input type="text" value={helpQuery} onChange={(e) => { setHelpQuery(e.target.value); setHelpResponse(null); }} onKeyDown={(e) => { if (e.key === "Enter") handleHelp(); }} placeholder="Posez votre question ici..." className="flex-1 p-2 rounded-lg border-2 border-slate-200 text-[11px] font-semibold text-slate-800 outline-none focus:border-amber-400" />
+                                                <button onClick={handleHelp} disabled={!helpQuery.trim()} title="Envoyer" className={`px-3 py-2 rounded-lg flex items-center justify-center ${helpQuery.trim() ? "bg-amber-400 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Send size={14} /></button>
+                                            </div>
+                                            {helpLoading && (
+                                                <div className="mt-2 p-2 rounded-lg text-[10px] font-semibold flex items-center gap-2 bg-amber-50 border border-amber-200">
+                                                    <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                                                    <span className="text-amber-700">🤖 L'IA réfléchit...</span>
+                                                </div>
+                                            )}
+                                            {helpResponse && !helpLoading && (
+                                                <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+                                                    <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Input */}
+                            <div>
+                                {currentStep.type === "date" ? (
+                                    <input type="date" value={currentValue} onChange={(e) => updateField(e.target.value)} title="Date de démarrage" className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white text-base font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center" />
+                                ) : currentStep.type === "textarea" ? (
+                                    <textarea value={currentValue} onChange={(e) => updateField(e.target.value)} placeholder={currentStep.placeholder} rows={3} className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white text-sm font-semibold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all resize-none" autoFocus />
+                                ) : (
+                                    <div className="relative">
+                                        <Pencil size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input type="text" value={currentValue} onChange={(e) => updateField(e.target.value)} onKeyDown={handleKeyDown} placeholder={currentStep.placeholder} className="w-full p-4 pl-10 rounded-2xl border-2 border-slate-200 bg-white text-base font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all" autoFocus />
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
-
-                    {/* Aide IA */}
-                    <div className="mb-3">
-                        {!showHelp ? (
-                            <button onClick={() => { setShowHelp(true); setHelpQuery(""); setHelpResponse(null); }} className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-xs font-bold text-amber-600 flex items-center justify-center gap-2 transition-colors active:scale-95">
-                                <Lightbulb size={14} /> 💡 Obtenir de l'aide IA
-                            </button>
-                        ) : (
-                            <div className="bg-amber-50 rounded-xl border-2 border-amber-200 overflow-hidden">
-                                <div className="bg-amber-100/80 px-3 py-1.5 flex items-center justify-between border-b border-amber-200">
-                                    <div className="flex items-center gap-1.5">
-                                        <Lightbulb size={12} className="text-primary-yellow" />
-                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Assistant IA</span>
-                                    </div>
-                                    <button onClick={() => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); }} className="text-amber-400 hover:text-amber-600" title="Fermer"><X size={12} /></button>
-                                </div>
-                                <div className="p-2.5">
-                                    <div className="flex gap-1.5">
-                                        <input type="text" value={helpQuery} onChange={(e) => { setHelpQuery(e.target.value); setHelpResponse(null); }} onKeyDown={(e) => { if (e.key === "Enter") handleHelp(); }} placeholder="Posez votre question ici..." className="flex-1 p-2 rounded-lg border-2 border-slate-200 text-[11px] font-semibold text-slate-800 outline-none focus:border-amber-400" />
-                                        <button onClick={handleHelp} disabled={!helpQuery.trim()} title="Envoyer" className={`px-3 py-2 rounded-lg flex items-center justify-center ${helpQuery.trim() ? "bg-amber-400 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Send size={14} /></button>
-                                    </div>
-                                    {helpLoading && (
-                                        <div className="mt-2 p-2 rounded-lg text-[10px] font-semibold flex items-center gap-2 bg-amber-50 border border-amber-200">
-                                            <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-amber-700">🤖 L'IA réfléchit...</span>
-                                        </div>
-                                    )}
-                                    {helpResponse && !helpLoading && (
-                                        <div className="mt-2 p-3 rounded-lg text-[12px] font-semibold leading-relaxed bg-green-50 border border-green-200 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-                                            <p className="whitespace-pre-line text-slate-800">{helpResponse}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Input */}
-                    <div>
-                        {currentStep.type === "date" ? (
-                            <input type="date" value={currentValue} onChange={(e) => updateField(e.target.value)} title="Date de démarrage" className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white text-base font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center" />
-                        ) : currentStep.type === "textarea" ? (
-                            <textarea value={currentValue} onChange={(e) => updateField(e.target.value)} placeholder={currentStep.placeholder} rows={3} className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white text-sm font-semibold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all resize-none" autoFocus />
-                        ) : (
-                            <div className="relative">
-                                <Pencil size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input type="text" value={currentValue} onChange={(e) => updateField(e.target.value)} onKeyDown={handleKeyDown} placeholder={currentStep.placeholder} className="w-full p-4 pl-10 rounded-2xl border-2 border-slate-200 bg-white text-base font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all" autoFocus />
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
