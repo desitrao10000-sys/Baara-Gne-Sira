@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
     ArrowLeft,
     Users,
@@ -9,6 +10,8 @@ import {
     CheckCircle2,
     ChevronRight,
     Sparkles,
+    Trash2,
+    AlertTriangle,
 } from "lucide-react";
 import { Project } from "@/lib/useSupabaseProjects";
 
@@ -17,10 +20,12 @@ interface ProjectSectionsLandingProps {
     onBack: () => void;
     onSectionClick: (section: string) => void;
     onCreateProject: () => void;
+    onDelete?: (projectId: string) => void;
 }
 
-export default function ProjectSectionsLanding({ project, onBack, onSectionClick, onCreateProject }: ProjectSectionsLandingProps) {
+export default function ProjectSectionsLanding({ project, onBack, onSectionClick, onCreateProject, onDelete }: ProjectSectionsLandingProps) {
     const hasProject = !!project;
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const sections = [
         {
@@ -173,6 +178,31 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                             <Sparkles size={14} className="text-blue-500" />
                             Conseil : Remplissez les sections dans l'ordre pour une meilleure cohérence de votre plan d'affaires.
                         </p>
+                    </div>
+                )}
+
+                {/* Supprimer le projet */}
+                {hasProject && onDelete && (
+                    <div className="mt-4 mb-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="h-px flex-1 bg-red-200" />
+                            <span className="text-xs font-black text-red-400 uppercase tracking-widest">Zone danger</span>
+                            <div className="h-px flex-1 bg-red-200" />
+                        </div>
+                        {!showDeleteConfirm ? (
+                            <button onClick={() => setShowDeleteConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/50 text-red-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
+                                <Trash2 size={16} /> Supprimer ce projet
+                            </button>
+                        ) : (
+                            <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                                <p className="text-sm font-black text-red-700 flex items-center gap-2 mb-1"><AlertTriangle size={16} /> Confirmer la suppression ?</p>
+                                <p className="text-xs text-red-500 mb-3 font-semibold">Action irréversible. Toutes les données seront perdues.</p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { onDelete(project.id); setShowDeleteConfirm(false); }} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-red-500/30"><Trash2 size={13} /> Oui, supprimer</button>
+                                    <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold border border-slate-200">Annuler</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

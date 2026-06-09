@@ -128,6 +128,11 @@ export default function Home() {
               }
             }}
             onCreateProject={() => setShowWizard(true)}
+            onDelete={async (projectId: string) => {
+              await deleteProject(projectId);
+              setSelectedProject(null);
+              setCurrentView("project-list");
+            }}
           />
         ) : currentView === "section-detail" && selectedProject ? (
           <SectionDetailView
