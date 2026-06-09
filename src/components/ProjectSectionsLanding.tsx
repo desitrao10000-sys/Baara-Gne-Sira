@@ -199,6 +199,13 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                         )}
                     </div>
                 )}
+
+                {/* Bouton Créer le projet */}
+                <div className="mt-5 mb-4">
+                    <button onClick={onCreateProject} className="w-full py-4 bg-gradient-to-r from-primary-yellow to-amber-400 text-white rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 active:scale-95 transition-transform">
+                        <Sparkles size={20} /> Créer le projet
+                    </button>
+                </div>
             </div>
         </div>
     );
