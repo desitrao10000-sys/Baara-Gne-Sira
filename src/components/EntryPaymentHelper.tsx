@@ -230,14 +230,10 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                             <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
                         </div>
                     )}
-                    <div className="flex justify-between text-sm border-t border-slate-300 pt-2">
-                        <span className="font-black text-slate-800">Total général entrée</span>
-                        <span className="font-black text-green-700 text-base">+{fmt(total2Combined)} FCFA</span>
-                    </div>
                     {showPC && total1 > 0 && (() => {
-                        const creditRestant = total1 - total2Combined;
+                        const creditRestant = total1 - total2Payments;
                         return (
-                            <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                            <div className="flex justify-between text-sm border-t border-slate-300 pt-2">
                                 <span className="font-black text-slate-800">Total crédit restant</span>
                                 <span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>
                                     {creditRestant > 0 ? fmt(creditRestant) : "0"} FCFA
@@ -245,6 +241,10 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                             </div>
                         );
                     })()}
+                    <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                        <span className="font-black text-slate-800">Total général entrée</span>
+                        <span className="font-black text-green-700 text-base">+{fmt(total2Combined)} FCFA</span>
+                    </div>
                 </div>
             )}
         </div>
