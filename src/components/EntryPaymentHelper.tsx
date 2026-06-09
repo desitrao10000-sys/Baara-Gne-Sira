@@ -40,19 +40,17 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
     const total2Combined = total2Payments + total2PF;
     const totalGeneral = total2Combined - total1;
 
-    // Validate: send items to parent — only active section
+    // Validate: combine Total PC + Total FP, send to parent
     const handleValidate = () => {
         const items: { designation: string; montant: number }[] = [];
 
-        if (showPC) {
-            // Only Paiement Client
-            payments.forEach(p => {
-                if (p.montant > 0) items.push({ designation: p.designation || "Paiement client", montant: p.montant });
-            });
+        // Paiement Client — Total général entrée
+        if (showPC && total2Payments > 0) {
+            items.push({ designation: "Paiement client", montant: total2Payments });
         }
 
-        if (showFP) {
-            // Only Fonds Portefeuille
+        // Fonds Portefeuille — Total général entrée
+        if (showFP && total2PF > 0) {
             pfWithdraws.forEach((w, i) => {
                 if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
             });
@@ -250,7 +248,7 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                     })()}
                     <button onClick={handleValidate} disabled={total2Combined <= 0}
                         className={`w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 mt-2 ${total2Combined > 0 ? "bg-teal-600 text-white active:scale-95 shadow-md" : "bg-slate-200 text-slate-400"}`}>
-                        <Check size={14} /> Valider et ajouter aux entrées
+                        <Check size={14} /> Valider
                     </button>
                 </div>
             )}
