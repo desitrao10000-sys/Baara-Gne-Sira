@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
     ArrowLeft, FolderKanban, Building2, MapPin, Globe2,
-    Calendar, Clock, FileText, Target, Sparkles, Trash2, AlertTriangle,
+    Calendar, Clock, FileText, Target, Sparkles, Save, Check,
 } from "lucide-react";
 import { Project, ProjectInfo } from "@/lib/useSupabaseProjects";
 
@@ -14,24 +14,47 @@ interface SectionDetailViewProps {
     onDelete: (projectId: string) => void;
 }
 
-const SECTOR_LABELS: Record<string, string> = {
-    commerce: "🛒 Commerce", agriculture: "🌾 Agriculture", service: "💼 Service",
-    industrie: "🏭 Industrie", elevage: "🐄 Élevage", artisanat: "🪵 Artisanat",
-    transport: "🚚 Transport", technologie: "💻 Technologie", sante: "🏥 Santé",
-    education: "📚 Éducation", restauration: "🍽️ Restauration", batiment: "🏗️ Bâtiment"
-};
-const DURATION_LABELS: Record<string, string> = {
-    "3-mois": "3 mois", "6-mois": "6 mois", "1-an": "1 an",
-    "2-ans": "2 ans", "3-ans": "3 ans", "5-ans": "5 ans", "10-ans": "10 ans"
-};
-function fmtDate(d: string) {
-    if (!d) return "—";
-    try { return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); } catch { return d; }
-}
+const SECTORS = [
+    { value: "commerce", label: "🛒 Commerce" },
+    { value: "agriculture", label: "🌾 Agriculture" },
+    { value: "service", label: "💼 Service" },
+    { value: "industrie", label: "🏭 Industrie" },
+    { value: "elevage", label: "🐄 Élevage" },
+    { value: "artisanat", label: "🪵 Artisanat" },
+    { value: "transport", label: "🚚 Transport" },
+    { value: "technologie", label: "💻 Technologie" },
+    { value: "sante", label: "🏥 Santé" },
+    { value: "education", label: "📚 Éducation" },
+    { value: "restauration", label: "🍽️ Restauration" },
+    { value: "batiment", label: "🏗️ Bâtiment" },
+];
 
-export default function SectionDetailView({ project, onBack, onSave, onDelete }: SectionDetailViewProps) {
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const { info } = project;
+const DURATIONS = [
+    { value: "3-mois", label: "3 mois" },
+    { value: "6-mois", label: "6 mois" },
+    { value: "1-an", label: "1 an" },
+    { value: "2-ans", label: "2 ans" },
+    { value: "3-ans", label: "3 ans" },
+    { value: "5-ans", label: "5 ans" },
+    { value: "10-ans", label: "10 ans" },
+];
+
+const LOCATIONS = ["Ouagadougou", "Bobo-Dioulasso", "Koudougou", "Bamako", "Abidjan", "Dakar", "Conakry", "Lomé", "Cotonou", "Niamey"];
+const ZONES = ["Quartier / Village", "Commune", "Régionale", "Nationale", "Sous-régionale (UEMOA)"];
+
+export default function SectionDetailView({ project, onBack, onSave }: SectionDetailViewProps) {
+    const [form, setForm] = useState<ProjectInfo>({ ...project.info });
+    const [saved, setSaved] = useState(false);
+
+    const update = (key: keyof ProjectInfo, value: string) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+        setSaved(false);
+    };
+
+    const handleSave = () => {
+        onSave(form);
+        setSaved(true);
+    };
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -41,7 +64,7 @@ export default function SectionDetailView({ project, onBack, onSave, onDelete }:
                     <button onClick={onBack} className="text-white p-1" aria-label="Retour"><ArrowLeft size={24} /></button>
                     <div className="flex-1 min-w-0">
                         <h1 className="text-lg font-black text-white tracking-wide truncate">Section 2 — Détails</h1>
-                        <p className="text-white/60 text-xs font-bold">{info.name}</p>
+                        <p className="text-white/60 text-xs font-bold">{form.name || "Nouveau Projet"}</p>
                     </div>
                     <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
                         <FolderKanban size={22} className="text-primary-yellow" />
@@ -52,86 +75,86 @@ export default function SectionDetailView({ project, onBack, onSave, onDelete }:
 
             {/* Contenu scrollable */}
             <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6">
-                <div className="mt-2 mb-4">
-                    <div className="rounded-2xl overflow-hidden shadow-lg border border-yellow-100 mb-4">
-                        {/* Barre titre */}
-                        <div className="bg-gradient-to-br from-yellow-500 via-yellow-400 to-amber-500 px-5 py-4 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/30 border-2 border-white/40 flex items-center justify-center shrink-0">
-                                <Sparkles size={20} className="text-white" />
-                            </div>
-                            <h2 className="text-white font-black text-lg leading-tight flex-1 truncate">{info.name}</h2>
-                        </div>
-                        {/* Toutes les informations */}
-                        <div className="bg-white divide-y divide-slate-100 text-justify">
-                            {info.sector && (
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Building2 size={15} className="text-yellow-600" /></div>
-                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Secteur d'activité</p><p className="text-sm font-bold text-slate-900">{SECTOR_LABELS[info.sector] || info.sector}</p></div>
-                                </div>
-                            )}
-                            {info.location && (
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><MapPin size={15} className="text-yellow-600" /></div>
-                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Localisation</p><p className="text-sm font-bold text-slate-900">{info.location}</p></div>
-                                </div>
-                            )}
-                            {info.zone && (
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Globe2 size={15} className="text-yellow-600" /></div>
-                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Zone d'intervention</p><p className="text-sm font-bold text-slate-900">{info.zone}</p></div>
-                                </div>
-                            )}
-                            {info.startDate && (
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Calendar size={15} className="text-yellow-600" /></div>
-                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Date de démarrage</p><p className="text-sm font-bold text-slate-900">{fmtDate(info.startDate)}</p></div>
-                                </div>
-                            )}
-                            {info.duration && (
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Clock size={15} className="text-yellow-600" /></div>
-                                    <div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Durée prévue</p><p className="text-sm font-bold text-slate-900">{DURATION_LABELS[info.duration] || info.duration}</p></div>
-                                </div>
-                            )}
-                            {info.description && (
-                                <div className="flex items-start gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><FileText size={15} className="text-yellow-600" /></div>
-                                    <div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Description</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{info.description}</p></div>
-                                </div>
-                            )}
-                            {info.objectives && (
-                                <div className="flex items-start gap-3 px-4 py-3">
-                                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><Target size={15} className="text-yellow-600" /></div>
-                                    <div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{info.objectives}</p></div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                <div className="text-center mb-4 mt-1">
+                    <p className="text-sm font-bold text-slate-600">Remplissez les informations de votre projet</p>
                 </div>
 
-                {/* Zone danger — supprimer le projet */}
-                <div className="mt-4 mb-2">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="h-px flex-1 bg-red-200" />
-                        <span className="text-xs font-black text-red-400 uppercase tracking-widest">Zone danger</span>
-                        <div className="h-px flex-1 bg-red-200" />
-                    </div>
-                    {!showDeleteConfirm ? (
-                        <button onClick={() => setShowDeleteConfirm(true)} className="w-full p-4 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/50 text-red-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
-                            <Trash2 size={16} /> Supprimer ce projet
-                        </button>
-                    ) : (
-                        <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-                            <p className="text-sm font-black text-red-700 flex items-center gap-2 mb-1"><AlertTriangle size={16} /> Confirmer la suppression ?</p>
-                            <p className="text-xs text-red-500 mb-3 font-semibold">Action irréversible. Toutes les données seront perdues.</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => onDelete(project.id)} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-red-500/30"><Trash2 size={13} /> Oui, supprimer</button>
-                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white text-slate-600 rounded-xl text-xs font-bold border border-slate-200">Annuler</button>
-                            </div>
+                <div className="space-y-4">
+                    {/* Nom */}
+                    <FieldCard icon={<Sparkles size={15} className="text-yellow-600" />} label="Nom du projet">
+                        <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Tapez le nom de votre projet..." className="w-full p-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-yellow-400 transition-all" />
+                    </FieldCard>
+
+                    {/* Secteur */}
+                    <FieldCard icon={<Building2 size={15} className="text-yellow-600" />} label="Secteur d'activité">
+                        <div className="flex flex-wrap gap-2">
+                            {SECTORS.map((s) => (
+                                <button key={s.value} onClick={() => update("sector", s.value)} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${form.sector === s.value ? "border-yellow-400 bg-yellow-50 text-yellow-700 shadow-md shadow-yellow-500/20" : "border-slate-200 bg-white text-slate-600"}`}>{s.label}</button>
+                            ))}
                         </div>
-                    )}
+                    </FieldCard>
+
+                    {/* Localisation */}
+                    <FieldCard icon={<MapPin size={15} className="text-yellow-600" />} label="Localisation">
+                        <input type="text" value={form.location} onChange={(e) => update("location", e.target.value)} placeholder="Votre ville..." className="w-full p-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-yellow-400 transition-all" />
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            {LOCATIONS.map((loc) => (
+                                <button key={loc} onClick={() => update("location", loc)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${form.location === loc ? "border-yellow-400 bg-yellow-50 text-yellow-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>{loc}</button>
+                            ))}
+                        </div>
+                    </FieldCard>
+
+                    {/* Zone */}
+                    <FieldCard icon={<Globe2 size={15} className="text-yellow-600" />} label="Zone d'intervention">
+                        <div className="flex flex-wrap gap-2">
+                            {ZONES.map((z) => (
+                                <button key={z} onClick={() => update("zone", z)} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${form.zone === z ? "border-yellow-400 bg-yellow-50 text-yellow-700 shadow-md shadow-yellow-500/20" : "border-slate-200 bg-white text-slate-600"}`}>{z}</button>
+                            ))}
+                        </div>
+                    </FieldCard>
+
+                    {/* Date */}
+                    <FieldCard icon={<Calendar size={15} className="text-yellow-600" />} label="Date de démarrage">
+                        <input type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} title="Date de démarrage" className="w-full p-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-yellow-400 transition-all" />
+                    </FieldCard>
+
+                    {/* Durée */}
+                    <FieldCard icon={<Clock size={15} className="text-yellow-600" />} label="Durée prévue">
+                        <div className="flex flex-wrap gap-2">
+                            {DURATIONS.map((d) => (
+                                <button key={d.value} onClick={() => update("duration", d.value)} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${form.duration === d.value ? "border-yellow-400 bg-yellow-50 text-yellow-700 shadow-md shadow-yellow-500/20" : "border-slate-200 bg-white text-slate-600"}`}>{d.label}</button>
+                            ))}
+                        </div>
+                    </FieldCard>
+
+                    {/* Description */}
+                    <FieldCard icon={<FileText size={15} className="text-yellow-600" />} label="Description">
+                        <textarea value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="Décrivez votre projet..." rows={3} className="w-full p-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-semibold text-slate-800 outline-none focus:border-yellow-400 transition-all resize-none" />
+                    </FieldCard>
+
+                    {/* Objectifs */}
+                    <FieldCard icon={<Target size={15} className="text-yellow-600" />} label="Objectifs">
+                        <textarea value={form.objectives} onChange={(e) => update("objectives", e.target.value)} placeholder="Quels sont vos grands objectifs ?" rows={3} className="w-full p-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-semibold text-slate-800 outline-none focus:border-yellow-400 transition-all resize-none" />
+                    </FieldCard>
                 </div>
+
+                {/* Bouton sauvegarder */}
+                <button onClick={handleSave} className="w-full mt-4 py-4 bg-gradient-to-r from-yellow-500 via-yellow-400 to-amber-500 text-white rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/30 active:scale-95 transition-transform">
+                    {saved ? <><Check size={18} /> Enregistré ✓</> : <><Save size={18} /> Enregistrer</>}
+                </button>
             </div>
+        </div>
+    );
+}
+
+function FieldCard({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+    return (
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-yellow-100">
+            <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">{icon}</div>
+                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">{label}</p>
+            </div>
+            {children}
         </div>
     );
 }
