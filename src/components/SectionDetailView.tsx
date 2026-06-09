@@ -208,19 +208,27 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
 
     const handleHelp = async () => {
         if (!helpQuery.trim()) return;
-        const localAnswer = getLocalHelp(currentStep.id, helpQuery);
-        if (localAnswer) { setHelpResponse(localAnswer); return; }
         setHelpLoading(true);
+        setHelpResponse(null);
         try {
             const res = await fetch("/api/gemini-project-help", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ query: helpQuery, sectionId: currentStep.id, sectionTitle: currentStep.title }),
             });
-            if (res.ok) { const d = await res.json(); setHelpResponse(d.response); }
-            else { setHelpResponse("💡 Posez une question plus précise pour obtenir de l'aide sur cette section."); }
+            if (res.ok) {
+                const d = await res.json();
+                if (d.response) { setHelpResponse(d.response); }
+                else { setHelpResponse(d.error || "💡 Reformulez votre question."); }
+            } else {
+                // Fallback vers aide locale si l'API échoue
+                const localAnswer = getLocalHelp(currentStep.id, helpQuery);
+                setHelpResponse(localAnswer || "⚠️ L'IA est indisponible. Vérifiez votre connexion et reformulez votre question.");
+            }
         } catch {
-            setHelpResponse("💡 Posez une question plus précise pour obtenir de l'aide sur cette section.");
+            // Fallback vers aide locale si pas de réseau
+            const localAnswer = getLocalHelp(currentStep.id, helpQuery);
+            setHelpResponse(localAnswer || "⚠️ Pas de connexion. L'aide IA nécessite internet.");
         }
         setHelpLoading(false);
     };
