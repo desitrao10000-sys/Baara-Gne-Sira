@@ -4,30 +4,26 @@ import { useState } from "react";
 import {
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, MapPin, Globe2,
     Calendar, Clock, FileText, Target, Pencil, Lightbulb, Send, X, FolderKanban,
-    UserPlus, Phone, Home, ShoppingBag, CreditCard, Eye, Plus, Trash2, Users,
+    UserPlus, Phone, Home, ShoppingBag, CreditCard, Eye, Plus, Trash2, Users, Save, Edit3,
 } from "lucide-react";
 import { Project, ProjectInfo } from "@/lib/useSupabaseProjects";
 
 // ─── Interface Client ──────────────────────────────────
 interface ClientInfo {
     id: string;
-    // Identification
     nom: string;
     telephone: string;
     adresse: string;
-    // Profil commercial
     typeClient: string;
     produitsHabituels: string;
     frequenceAchat: string;
     montantMoyen: string;
     modePaiement: string;
-    // Gestion crédit
     plafondAutorise: string;
     garant: string;
     moyenGaranti: string;
     garantContact: string;
     montantGaranti: string;
-    // Observations
     profession: string;
     fiabilite: string;
     notes: string;
@@ -202,8 +198,8 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const [helpQuery, setHelpQuery] = useState("");
     const [helpResponse, setHelpResponse] = useState<string | null>(null);
     const [helpLoading, setHelpLoading] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
 
-    // ─── Clients State ───
     const [clients, setClients] = useState<ClientInfo[]>(() => {
         try { return form.clientsJson ? JSON.parse(form.clientsJson) : []; } catch { return []; }
     });
@@ -217,10 +213,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const progress = ((step + 1) / totalSteps) * 100;
     const currentValue = form[currentStep?.id] ?? "";
 
-    const updateField = (value: string) => {
-        setForm((prev) => ({ ...prev, [currentStep.id]: value }));
-    };
-
+    const updateField = (value: string) => setForm((prev) => ({ ...prev, [currentStep.id]: value }));
     const canGoNext = () => isClientStep || currentValue.trim() !== "";
 
     const saveClientsToForm = (updatedClients: ClientInfo[]) => {
@@ -230,79 +223,124 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
 
     const saveClientForm = () => {
         if (!clientForm.nom.trim()) return;
-        if (editClientId) {
-            saveClientsToForm(clients.map(c => c.id === editClientId ? clientForm : c));
-        } else {
-            saveClientsToForm([...clients, clientForm]);
-        }
-        setClientForm(emptyClient());
-        setShowClientForm(false);
-        setEditClientId(null);
+        if (editClientId) { saveClientsToForm(clients.map(c => c.id === editClientId ? clientForm : c)); }
+        else { saveClientsToForm([...clients, clientForm]); }
+        setClientForm(emptyClient()); setShowClientForm(false); setEditClientId(null);
     };
 
     const removeClient = (id: string) => saveClientsToForm(clients.filter(c => c.id !== id));
-
-    const startEditClient = (c: ClientInfo) => {
-        setClientForm({ ...c });
-        setEditClientId(c.id);
-        setShowClientForm(true);
-    };
-
+    const startEditClient = (c: ClientInfo) => { setClientForm({ ...c }); setEditClientId(c.id); setShowClientForm(true); };
     const cancelClientForm = () => { setShowClientForm(false); setClientForm(emptyClient()); setEditClientId(null); };
-
     const resetHelp = () => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); };
 
     const handleNext = () => {
-        if (step < totalSteps - 1) {
-            setDirection("forward");
-            resetHelp();
-            setStep(step + 1);
-        } else {
-            onSave(form);
-        }
+        if (step < totalSteps - 1) { setDirection("forward"); resetHelp(); setStep(step + 1); }
+        else { setShowSummary(true); }
     };
 
-    const handlePrev = () => {
-        if (step > 0) {
-            setDirection("backward");
-            resetHelp();
-            setStep(step - 1);
-        }
-    };
+    const handlePrev = () => { if (step > 0) { setDirection("backward"); resetHelp(); setStep(step - 1); } };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && canGoNext() && currentStep.type !== "textarea") {
-            handleNext();
-        }
+        if (e.key === "Enter" && canGoNext() && currentStep.type !== "textarea") handleNext();
     };
 
     const handleHelp = async () => {
         if (!helpQuery.trim()) return;
-        setHelpLoading(true);
-        setHelpResponse(null);
+        setHelpLoading(true); setHelpResponse(null);
         try {
             const res = await fetch("/api/gemini-project-help", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+                method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ query: helpQuery, sectionId: currentStep.id, sectionTitle: currentStep.title }),
             });
             if (res.ok) {
                 const d = await res.json();
-                if (d.response) { setHelpResponse(d.response); }
-                else { setHelpResponse(d.error || "💡 Reformulez votre question."); }
+                setHelpResponse(d.response || d.error || "💡 Reformulez votre question.");
             } else {
-                // Fallback vers aide locale si l'API échoue
-                const localAnswer = getLocalHelp(currentStep.id, helpQuery);
-                setHelpResponse(localAnswer || "⚠️ L'IA est indisponible. Vérifiez votre connexion et reformulez votre question.");
+                setHelpResponse(getLocalHelp(currentStep.id, helpQuery) || "⚠️ L'IA est indisponible.");
             }
         } catch {
-            // Fallback vers aide locale si pas de réseau
-            const localAnswer = getLocalHelp(currentStep.id, helpQuery);
-            setHelpResponse(localAnswer || "⚠️ Pas de connexion. L'aide IA nécessite internet.");
+            setHelpResponse(getLocalHelp(currentStep.id, helpQuery) || "⚠️ Pas de connexion.");
         }
         setHelpLoading(false);
     };
 
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); } catch { return d; } };
+
+    // ─── RENDU RÉSUMÉ ───
+    if (showSummary) {
+        return (
+            <div className="fixed inset-0 bg-pastel flex flex-col z-50">
+                <div className="relative overflow-hidden shrink-0">
+                    <div className="textured-navy p-4 pb-6 flex items-center gap-3 relative z-10">
+                        <button onClick={onBack} className="text-white p-1" aria-label="Retour"><ArrowLeft size={24} /></button>
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-lg font-black text-white tracking-wide truncate">Résumé — Section 2</h1>
+                            <p className="text-white/60 text-xs font-bold">{form.name}</p>
+                        </div>
+                        <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                            <Check size={22} className="text-green-300" />
+                        </div>
+                    </div>
+                    <div className="absolute -bottom-3 left-0 right-0 h-6 bg-pastel rounded-t-[20px]" />
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6">
+                    <div className="rounded-2xl overflow-hidden shadow-lg border border-yellow-100 mb-4">
+                        <div className="bg-gradient-to-br from-yellow-500 via-yellow-400 to-amber-500 px-5 py-4 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/30 border-2 border-white/40 flex items-center justify-center shrink-0"><Sparkles size={20} className="text-white" /></div>
+                            <h2 className="text-white font-black text-lg leading-tight flex-1 truncate">{form.name}</h2>
+                        </div>
+                        <div className="bg-white divide-y divide-slate-100">
+                            {form.sector && (<div className="flex items-center gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Building2 size={15} className="text-yellow-600" /></div><div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Secteur</p><p className="text-sm font-bold text-slate-900">{form.sector}</p></div></div>)}
+                            {form.location && (<div className="flex items-center gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><MapPin size={15} className="text-yellow-600" /></div><div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Localisation</p><p className="text-sm font-bold text-slate-900">{form.location}</p></div></div>)}
+                            {form.zone && (<div className="flex items-center gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Globe2 size={15} className="text-yellow-600" /></div><div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Zone</p><p className="text-sm font-bold text-slate-900">{form.zone}</p></div></div>)}
+                            {form.startDate && (<div className="flex items-center gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Calendar size={15} className="text-yellow-600" /></div><div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Démarrage</p><p className="text-sm font-bold text-slate-900">{fmtDate(form.startDate)}</p></div></div>)}
+                            {form.duration && (<div className="flex items-center gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0"><Clock size={15} className="text-yellow-600" /></div><div><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider">Durée</p><p className="text-sm font-bold text-slate-900">{form.duration}</p></div></div>)}
+                            {form.description && (<div className="flex items-start gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><FileText size={15} className="text-yellow-600" /></div><div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Description</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{form.description}</p></div></div>)}
+                            {form.objectives && (<div className="flex items-start gap-3 px-4 py-3"><div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 mt-0.5"><Target size={15} className="text-yellow-600" /></div><div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{form.objectives}</p></div></div>)}
+                        </div>
+                    </div>
+
+                    {clients.length > 0 && (
+                        <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-teal-400" />
+                                <span className="text-xs font-black text-teal-600 uppercase tracking-widest px-1">Clients ({clients.length})</span>
+                                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-teal-400" />
+                            </div>
+                            <div className="space-y-2">
+                                {clients.map((c, i) => (
+                                    <div key={c.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                        <div className="bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-2 flex items-center justify-between">
+                                            <span className="text-xs font-black text-white/80">Client {i + 1}</span>
+                                            <span className="text-sm font-black text-white">{c.nom}</span>
+                                        </div>
+                                        <div className="p-3 grid grid-cols-2 gap-2 text-[11px]">
+                                            {c.telephone && <div><span className="font-black text-slate-400 uppercase text-[9px]">Tél</span><p className="font-bold text-slate-800">{c.telephone}</p></div>}
+                                            {c.adresse && <div><span className="font-black text-slate-400 uppercase text-[9px]">Adresse</span><p className="font-bold text-slate-800">{c.adresse}</p></div>}
+                                            {c.typeClient && <div><span className="font-black text-slate-400 uppercase text-[9px]">Type</span><p className="font-bold text-slate-800">{c.typeClient}</p></div>}
+                                            {c.modePaiement && <div><span className="font-black text-slate-400 uppercase text-[9px]">Paiement</span><p className="font-bold text-slate-800">{c.modePaiement}</p></div>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-5 flex gap-4 shrink-0 bg-white/80 backdrop-blur-sm border-t border-slate-200/50">
+                    <button onClick={() => setShowSummary(false)} className="flex-1 py-3.5 rounded-2xl font-extrabold text-slate-600 bg-slate-100 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <Edit3 size={20} /> Modifier
+                    </button>
+                    <button onClick={() => onSave(form)} className="flex-1 py-3.5 rounded-2xl font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-all bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30">
+                        <Save size={20} /> Enregistrer
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // ─── RENDU WIZARD ───
     return (
         <div className="fixed inset-0 bg-pastel flex flex-col z-50">
             {/* Header */}
@@ -310,9 +348,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                 <button onClick={onBack} className="text-white p-1" aria-label="Retour"><ArrowLeft size={24} /></button>
                 <div className="flex-1">
                     <h1 className="text-lg font-black text-white tracking-wide">Section 2 — Détails du Projet</h1>
-                    <p className="text-white/60 text-xs font-bold">
-                        {form.name || "Nouveau Projet"}
-                    </p>
+                    <p className="text-white/60 text-xs font-bold">{form.name || "Nouveau Projet"}</p>
                 </div>
                 <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
                     <FolderKanban size={22} className="text-primary-yellow" />
@@ -328,17 +364,13 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
             {/* Question Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div key={step} className={`flex-1 flex flex-col p-5 overflow-y-auto ${direction === "forward" ? "animate-slide-in-right" : "animate-slide-in-left"}`}>
-                    {/* Icon */}
                     <div className="flex justify-center mb-4">
                         <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center">{currentStep.icon}</div>
                     </div>
-
-                    {/* Question */}
                     <h2 className="text-xl font-black text-text-dark text-center mb-1 leading-tight">{currentStep.title}</h2>
                     <p className="text-center text-slate-500 text-xs font-semibold mb-5">{currentStep.subtitle}</p>
 
                     {isClientStep ? (
-                        /* ═══════ FORMULAIRE CLIENT ═══════ */
                         <div className="space-y-2.5 flex-1">
                             {clients.map((c) => (
                                 <div key={c.id} className="bg-white rounded-xl p-2.5 border border-slate-200 shadow-sm">
@@ -359,7 +391,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                             {showClientForm ? (
                                 <div className="bg-teal-50 rounded-xl p-2.5 border border-teal-200 space-y-2">
                                     <p className="text-[10px] font-black text-teal-700 uppercase tracking-wider">{editClientId ? "✏️ Modifier" : "➕ Nouveau client"}</p>
-                                    {/* Identification */}
                                     <div className="bg-white rounded-lg p-2 border border-teal-100 space-y-1.5">
                                         <p className="text-[9px] font-black text-teal-600 uppercase">🪪 Identification</p>
                                         <input type="text" value={clientForm.nom} onChange={(e) => setClientForm({ ...clientForm, nom: e.target.value })} placeholder="Nom complet *" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
@@ -369,7 +400,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                         </div>
                                         <textarea value={clientForm.produitsHabituels} onChange={(e) => setClientForm({ ...clientForm, produitsHabituels: e.target.value })} placeholder="📦 Identification et caractéristiques des produits que le client achète chez nous..." rows={2} className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400 resize-none" />
                                     </div>
-                                    {/* Profil Commercial */}
                                     <div className="bg-white rounded-lg p-2 border border-blue-100 space-y-1.5">
                                         <p className="text-[9px] font-black text-blue-600 uppercase">🛒 Profil Commercial</p>
                                         <div className="grid grid-cols-2 gap-1.5">
@@ -399,7 +429,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                             <input type="text" value={clientForm.montantMoyen} onChange={(e) => setClientForm({ ...clientForm, montantMoyen: e.target.value })} placeholder="Montant moyen" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
                                         </div>
                                     </div>
-                                    {/* Gestion Crédit */}
                                     <div className="bg-white rounded-lg p-2 border border-amber-100 space-y-1.5">
                                         <p className="text-[9px] font-black text-amber-600 uppercase">💳 Gestion Crédit</p>
                                         <input type="text" value={clientForm.plafondAutorise} onChange={(e) => setClientForm({ ...clientForm, plafondAutorise: e.target.value })} placeholder="Plafond de crédit autorisé" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
@@ -412,29 +441,24 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                             <input type="text" value={clientForm.montantGaranti} onChange={(e) => setClientForm({ ...clientForm, montantGaranti: e.target.value })} placeholder="Montant/valeur garanti" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
                                         </div>
                                     </div>
-                                    {/* Observations */}
                                     <div className="bg-white rounded-lg p-2 border border-purple-100 space-y-1.5">
                                         <p className="text-[9px] font-black text-purple-600 uppercase">📝 Observations</p>
                                         <input type="text" value={clientForm.profession} onChange={(e) => setClientForm({ ...clientForm, profession: e.target.value })} placeholder="Profession" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400" />
                                         <input type="text" value={clientForm.fiabilite} onChange={(e) => setClientForm({ ...clientForm, fiabilite: e.target.value })} placeholder="Fiabilité / Réputation" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400" />
                                         <textarea value={clientForm.notes} onChange={(e) => setClientForm({ ...clientForm, notes: e.target.value })} placeholder="Notes particulières..." rows={2} className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-purple-400 resize-none" />
                                     </div>
-                                    {/* Boutons */}
                                     <div className="flex gap-2">
                                         <button onClick={saveClientForm} disabled={!clientForm.nom.trim()} className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 ${clientForm.nom.trim() ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}><Check size={13} /> {editClientId ? "Mettre à jour" : "Ajouter"}</button>
                                         <button onClick={cancelClientForm} className="flex-1 py-2 bg-white text-slate-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 border border-slate-200"><X size={13} /> Annuler</button>
                                     </div>
                                 </div>
                             ) : null}
-                            {/* Bouton Ajouter client toujours visible en bas */}
                             {!showClientForm && (
                                 <button onClick={() => { setClientForm(emptyClient()); setEditClientId(null); setShowClientForm(true); }} className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-700 shadow-md active:scale-95 transition-all"><Plus size={14} /> Ajouter un client</button>
                             )}
                         </div>
                     ) : (
-                        /* ═══════ ÉTAPES NORMALES ═══════ */
                         <>
-                            {/* Suggestions */}
                             {currentStep.suggestions.length > 0 && (
                                 <div className="mb-4">
                                     <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">💡 Choisissez une proposition ou tapez votre propre réponse :</p>
@@ -447,8 +471,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                     </div>
                                 </div>
                             )}
-
-                            {/* Aide IA */}
                             <div className="mb-3">
                                 {!showHelp ? (
                                     <button onClick={() => { setShowHelp(true); setHelpQuery(""); setHelpResponse(null); }} className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-xs font-bold text-amber-600 flex items-center justify-center gap-2 transition-colors active:scale-95">
@@ -483,8 +505,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                     </div>
                                 )}
                             </div>
-
-                            {/* Input */}
                             <div>
                                 {currentStep.type === "date" ? (
                                     <input type="date" value={currentValue} onChange={(e) => updateField(e.target.value)} title="Date de démarrage" className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white text-base font-bold text-slate-800 outline-none focus:border-vibrant-blue focus:shadow-lg focus:shadow-blue-500/20 transition-all text-center" />
@@ -512,11 +532,10 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                     <div className="flex-1" />
                 )}
                 <button onClick={handleNext} disabled={!canGoNext()} className={`flex-1 py-3.5 rounded-2xl font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-all ${canGoNext() ? "bg-gradient-to-r from-primary-yellow to-amber-400 text-white shadow-lg shadow-amber-500/30" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
-                    {step === totalSteps - 1 ? (<><Check size={20} /> Terminer</>) : (<>Suivant <ArrowRight size={20} /></>)}
+                    {step === totalSteps - 1 ? (<><Check size={20} /> Voir résumé</>) : (<>Suivant <ArrowRight size={20} /></>)}
                 </button>
             </div>
 
-            {/* Animations CSS */}
             <style jsx>{`
                 @keyframes slideInRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
                 @keyframes slideInLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
