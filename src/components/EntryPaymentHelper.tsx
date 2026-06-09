@@ -237,14 +237,17 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                         <span className="font-bold text-slate-600">Total général entrée</span>
                         <span className="font-black text-green-700">+{fmt(total2Combined)} FCFA</span>
                     </div>
-                    {showPC && total1 > 0 && (
-                        <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
-                            <span className="font-black text-slate-800">Total crédit restant</span>
-                            <span className={`font-black ${totalGeneral >= 0 ? "text-green-700" : "text-red-600"}`}>
-                                {totalGeneral >= 0 ? "+" : ""}{fmt(totalGeneral)} FCFA
-                            </span>
-                        </div>
-                    )}
+                    {showPC && total1 > 0 && (() => {
+                        const creditRestant = total1 - total2Combined;
+                        return (
+                            <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                                <span className="font-black text-slate-800">Total crédit restant</span>
+                                <span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>
+                                    {creditRestant > 0 ? fmt(creditRestant) : "0"} FCFA
+                                </span>
+                            </div>
+                        );
+                    })()}
                     <button onClick={handleValidate} disabled={total2Combined <= 0}
                         className={`w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 mt-2 ${total2Combined > 0 ? "bg-teal-600 text-white active:scale-95 shadow-md" : "bg-slate-200 text-slate-400"}`}>
                         <Check size={14} /> Valider et ajouter aux entrées
