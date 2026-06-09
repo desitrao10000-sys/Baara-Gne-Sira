@@ -7,6 +7,8 @@ import ProjectGrid from "@/components/ProjectGrid";
 import ProjectView from "@/components/ProjectView";
 import ProjectDetailView from "@/components/ProjectDetailView";
 import ProjectSectionsLanding from "@/components/ProjectSectionsLanding";
+import SectionTeamView from "@/components/SectionTeamView";
+import SectionTasksView from "@/components/SectionTasksView";
 import ProjectCreationWizard, { ProjectInfo } from "@/components/ProjectCreationWizard";
 import BusinessPlanWizard, { BusinessPlanData } from "@/components/BusinessPlanWizard";
 import DocumentUploadFlow from "@/components/DocumentUploadFlow";
@@ -114,17 +116,35 @@ export default function Home() {
             project={selectedProject}
             onBack={() => { setCurrentView("project-list"); setSelectedProject(null); }}
             onSectionClick={(section) => {
-              if (section === "detail" && selectedProject) {
-                setCurrentView("project-detail");
-              } else if (section === "team" && selectedProject) {
+              if (section === "team" && selectedProject) {
+                setCurrentView("section-team");
+              } else if (section === "detail" && selectedProject) {
                 setCurrentView("project-detail");
               } else if (section === "business" && selectedProject) {
                 setShowBusinessPlan(true);
               } else if (section === "tasks" && selectedProject) {
-                setCurrentView("project-detail");
+                setCurrentView("section-tasks");
               }
             }}
             onCreateProject={() => setShowWizard(true)}
+          />
+        ) : currentView === "section-team" && selectedProject ? (
+          <SectionTeamView
+            project={selectedProject}
+            onBack={() => setCurrentView("sections-landing")}
+            onSaveManager={async (manager) => {
+              await saveManager(selectedProject.id, manager);
+              setSelectedProject((prev) => prev ? { ...prev, manager } : null);
+            }}
+          />
+        ) : currentView === "section-tasks" && selectedProject ? (
+          <SectionTasksView
+            project={selectedProject}
+            onBack={() => setCurrentView("sections-landing")}
+            onSaveTasks={async (tasks) => {
+              await saveTasks(selectedProject.id, tasks);
+              setSelectedProject((prev) => prev ? { ...prev, tasks } : null);
+            }}
           />
         ) : currentView === "project-detail" && selectedProject ? (
           <ProjectDetailView
