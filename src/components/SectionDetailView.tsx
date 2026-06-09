@@ -23,9 +23,6 @@ interface ClientInfo {
     modePaiement: string;
     // Gestion crédit
     plafondAutorise: string;
-    montantEnCours: string;
-    dateOctroi: string;
-    echeance: string;
     garant: string;
     moyenGaranti: string;
     garantContact: string;
@@ -36,7 +33,7 @@ interface ClientInfo {
     notes: string;
 }
 function emptyClient(): ClientInfo {
-    return { id: crypto.randomUUID(), nom: "", telephone: "", adresse: "", typeClient: "", produitsHabituels: "", frequenceAchat: "", montantMoyen: "", modePaiement: "", plafondAutorise: "", montantEnCours: "", dateOctroi: "", echeance: "", garant: "", moyenGaranti: "", garantContact: "", montantGaranti: "", profession: "", fiabilite: "", notes: "" };
+    return { id: crypto.randomUUID(), nom: "", telephone: "", adresse: "", typeClient: "", produitsHabituels: "", frequenceAchat: "", montantMoyen: "", modePaiement: "", plafondAutorise: "", garant: "", moyenGaranti: "", garantContact: "", montantGaranti: "", profession: "", fiabilite: "", notes: "" };
 }
 
 interface SectionDetailViewProps {
@@ -370,6 +367,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                             <input type="text" value={clientForm.telephone} onChange={(e) => setClientForm({ ...clientForm, telephone: e.target.value })} placeholder="📞 Téléphone" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
                                             <input type="text" value={clientForm.adresse} onChange={(e) => setClientForm({ ...clientForm, adresse: e.target.value })} placeholder="📍 Adresse" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400" />
                                         </div>
+                                        <textarea value={clientForm.produitsHabituels} onChange={(e) => setClientForm({ ...clientForm, produitsHabituels: e.target.value })} placeholder="📦 Identification et caractéristiques des produits que le client achète chez nous..." rows={2} className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-teal-400 resize-none" />
                                     </div>
                                     {/* Profil Commercial */}
                                     <div className="bg-white rounded-lg p-2 border border-blue-100 space-y-1.5">
@@ -386,11 +384,6 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                                 <option value="Particulier">Particulier</option>
                                                 <option value="Autre">Autre</option>
                                             </select>
-                                            <input type="text" value={clientForm.produitsHabituels} onChange={(e) => setClientForm({ ...clientForm, produitsHabituels: e.target.value })} placeholder="Produits habituels" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            <input type="text" value={clientForm.frequenceAchat} onChange={(e) => setClientForm({ ...clientForm, frequenceAchat: e.target.value })} placeholder="Fréquence achat" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
-                                            <input type="text" value={clientForm.montantMoyen} onChange={(e) => setClientForm({ ...clientForm, montantMoyen: e.target.value })} placeholder="Montant moyen" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
                                             <select value={clientForm.modePaiement} onChange={(e) => setClientForm({ ...clientForm, modePaiement: e.target.value })} title="Mode de paiement" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400 bg-white text-slate-800">
                                                 <option value="">— Mode paiement —</option>
                                                 <option value="Espèces">💵 Espèces</option>
@@ -401,19 +394,18 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                                 <option value="Mixte">🔄 Mixte</option>
                                             </select>
                                         </div>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input type="text" value={clientForm.frequenceAchat} onChange={(e) => setClientForm({ ...clientForm, frequenceAchat: e.target.value })} placeholder="Fréquence achat" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                            <input type="text" value={clientForm.montantMoyen} onChange={(e) => setClientForm({ ...clientForm, montantMoyen: e.target.value })} placeholder="Montant moyen" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-blue-400" />
+                                        </div>
                                     </div>
                                     {/* Gestion Crédit */}
                                     <div className="bg-white rounded-lg p-2 border border-amber-100 space-y-1.5">
                                         <p className="text-[9px] font-black text-amber-600 uppercase">💳 Gestion Crédit</p>
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            <input type="text" value={clientForm.plafondAutorise} onChange={(e) => setClientForm({ ...clientForm, plafondAutorise: e.target.value })} placeholder="Plafond autorisé" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
-                                            <input type="text" value={clientForm.montantEnCours} onChange={(e) => setClientForm({ ...clientForm, montantEnCours: e.target.value })} placeholder="Montant en cours" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
-                                            <input type="date" value={clientForm.dateOctroi} onChange={(e) => setClientForm({ ...clientForm, dateOctroi: e.target.value })} title="Date d'octroi" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
-                                            <input type="date" value={clientForm.echeance} onChange={(e) => setClientForm({ ...clientForm, echeance: e.target.value })} title="Échéance" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
-                                        </div>
+                                        <input type="text" value={clientForm.plafondAutorise} onChange={(e) => setClientForm({ ...clientForm, plafondAutorise: e.target.value })} placeholder="Plafond de crédit autorisé" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
                                         <div className="grid grid-cols-2 gap-1.5">
                                             <input type="text" value={clientForm.garant} onChange={(e) => setClientForm({ ...clientForm, garant: e.target.value })} placeholder="Garant (nom)" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
-                                            <input type="text" value={clientForm.moyenGaranti} onChange={(e) => setClientForm({ ...clientForm, moyenGaranti: e.target.value })} placeholder="Moyen garanti (ex: terrain...)" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
+                                            <input type="text" value={clientForm.moyenGaranti} onChange={(e) => setClientForm({ ...clientForm, moyenGaranti: e.target.value })} placeholder="Moyen garanti (ex: terrain)" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5">
                                             <input type="text" value={clientForm.garantContact} onChange={(e) => setClientForm({ ...clientForm, garantContact: e.target.value })} placeholder="Contact garant" className="w-full p-1.5 rounded-lg border border-slate-200 text-xs font-semibold outline-none focus:border-amber-400" />
@@ -435,6 +427,10 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                 </div>
                             ) : (
                                 <button onClick={() => setShowClientForm(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-teal-300 text-teal-500 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-50"><Plus size={14} /> Ajouter un client</button>
+                            )}
+                            {/* Bouton Ajouter client visible après enregistrement */}
+                            {!showClientForm && clients.length > 0 && (
+                                <button onClick={() => { setClientForm(emptyClient()); setEditClientId(null); setShowClientForm(true); }} className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-700 shadow-md active:scale-95 transition-all"><Plus size={14} /> Ajouter un autre client</button>
                             )}
                         </div>
                     ) : (
