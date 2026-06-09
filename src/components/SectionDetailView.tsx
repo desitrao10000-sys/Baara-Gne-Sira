@@ -425,12 +425,10 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                         <button onClick={cancelClientForm} className="flex-1 py-2 bg-white text-slate-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 border border-slate-200"><X size={13} /> Annuler</button>
                                     </div>
                                 </div>
-                            ) : (
-                                <button onClick={() => setShowClientForm(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-teal-300 text-teal-500 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-50"><Plus size={14} /> Ajouter un client</button>
-                            )}
-                            {/* Bouton Ajouter client visible après enregistrement */}
-                            {!showClientForm && clients.length > 0 && (
-                                <button onClick={() => { setClientForm(emptyClient()); setEditClientId(null); setShowClientForm(true); }} className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-700 shadow-md active:scale-95 transition-all"><Plus size={14} /> Ajouter un autre client</button>
+                            ) : null}
+                            {/* Bouton Ajouter client toujours visible en bas */}
+                            {!showClientForm && (
+                                <button onClick={() => { setClientForm(emptyClient()); setEditClientId(null); setShowClientForm(true); }} className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-700 shadow-md active:scale-95 transition-all"><Plus size={14} /> Ajouter un client</button>
                             )}
                         </div>
                     ) : (
