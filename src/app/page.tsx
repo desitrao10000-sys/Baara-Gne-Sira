@@ -111,7 +111,7 @@ export default function Home() {
         {currentView === "home" ? (
           <ProjectGrid onAppClick={handleAppClick} />
         ) : currentView === "project-list" ? (
-          <ProjectListView projects={projects} onCreateProject={() => { setSelectedProject(null); setCurrentView("sections-landing"); }} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("sections-landing"); }} onDocUpload={() => setShowDocUpload(true)} />
+          <ProjectListView projects={projects} onCreateProject={() => { setSelectedProject(null); setCurrentView("sections-landing"); }} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("project-detail"); }} onDocUpload={() => setShowDocUpload(true)} />
         ) : currentView === "sections-landing" ? (
           <ProjectSectionsLanding
             project={selectedProject}
@@ -189,7 +189,7 @@ export default function Home() {
         ) : currentView === "project-detail" && selectedProject ? (
           <ProjectDetailView
             project={selectedProject}
-            onBack={() => { setCurrentView("sections-landing"); }}
+            onBack={() => { setCurrentView("project-list"); }}
             onSave={async (updatedInfo: ProjectInfo) => {
               const updated = { ...selectedProject, info: updatedInfo };
               await saveProject(updated);
@@ -281,9 +281,9 @@ function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUplo
 
       {projects.length > 0 && (
         <div className="mt-2">
-          <h3 className="text-lg font-black text-slate-800 mb-4 ml-2">Projets créés ({projects.length})</h3>
+          <h3 className="text-lg font-black text-slate-800 mb-4 ml-2">Projets créés ({projects.filter(p => p.info.name.trim()).length})</h3>
           <div className="space-y-3">
-            {projects.map((project) => {
+            {projects.filter(p => p.info.name.trim()).map((project) => {
               const progress = getProgress(project);
               return (
                 <button key={project.id} onClick={() => onSelectProject(project)} className="w-full bg-white rounded-2xl shadow-md border border-slate-200 active:scale-[0.98] transition-transform text-left overflow-hidden">
@@ -336,7 +336,7 @@ function ProjectListView({ projects, onCreateProject, onSelectProject, onDocUplo
         </div>
       )}
 
-      {projects.length === 0 && (
+      {projects.filter(p => p.info.name.trim()).length === 0 && (
         <div className="text-center py-10">
           <div className="text-6xl mb-4">📁</div>
           <p className="text-slate-400 font-bold">Aucun projet pour le moment</p>
