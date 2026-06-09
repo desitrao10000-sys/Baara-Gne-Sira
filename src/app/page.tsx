@@ -111,7 +111,7 @@ export default function Home() {
         {currentView === "home" ? (
           <ProjectGrid onAppClick={handleAppClick} />
         ) : currentView === "project-list" ? (
-          <ProjectListView projects={projects} onCreateProject={() => { setSelectedProject(null); setShowWizard(true); }} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("sections-landing"); }} onDocUpload={() => setShowDocUpload(true)} />
+          <ProjectListView projects={projects} onCreateProject={() => { setSelectedProject(null); setCurrentView("sections-landing"); }} onSelectProject={(p) => { setSelectedProject(p); setCurrentView("sections-landing"); }} onDocUpload={() => setShowDocUpload(true)} />
         ) : currentView === "sections-landing" ? (
           <ProjectSectionsLanding
             project={selectedProject}
