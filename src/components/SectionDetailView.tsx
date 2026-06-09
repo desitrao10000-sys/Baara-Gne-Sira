@@ -301,13 +301,13 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                         </div>
                     </div>
 
-                    {clients.length > 0 && (
-                        <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-teal-400" />
-                                <span className="text-xs font-black text-teal-600 uppercase tracking-widest px-1">Clients ({clients.length})</span>
-                                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-teal-400" />
-                            </div>
+                    <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-teal-400" />
+                            <span className="text-xs font-black text-teal-600 uppercase tracking-widest px-1">Clients ({clients.length})</span>
+                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-teal-400" />
+                        </div>
+                        {clients.length > 0 ? (
                             <div className="space-y-2">
                                 {clients.map((c, i) => (
                                     <div key={c.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -320,12 +320,20 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                                             {c.adresse && <div><span className="font-black text-slate-400 uppercase text-[9px]">Adresse</span><p className="font-bold text-slate-800">{c.adresse}</p></div>}
                                             {c.typeClient && <div><span className="font-black text-slate-400 uppercase text-[9px]">Type</span><p className="font-bold text-slate-800">{c.typeClient}</p></div>}
                                             {c.modePaiement && <div><span className="font-black text-slate-400 uppercase text-[9px]">Paiement</span><p className="font-bold text-slate-800">{c.modePaiement}</p></div>}
+                                            {c.produitsHabituels && <div className="col-span-2"><span className="font-black text-slate-400 uppercase text-[9px]">Produits</span><p className="font-bold text-slate-800">{c.produitsHabituels}</p></div>}
+                                            {c.frequenceAchat && <div><span className="font-black text-slate-400 uppercase text-[9px]">Fréquence</span><p className="font-bold text-slate-800">{c.frequenceAchat}</p></div>}
+                                            {c.montantMoyen && <div><span className="font-black text-slate-400 uppercase text-[9px]">Montant moy.</span><p className="font-bold text-slate-800">{c.montantMoyen}</p></div>}
+                                            {c.plafondAutorise && <div className="col-span-2"><span className="font-black text-slate-400 uppercase text-[9px]">Plafond crédit</span><p className="font-bold text-slate-800">{c.plafondAutorise}</p></div>}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-4 text-center">
+                                <p className="text-xs text-slate-400 font-semibold italic">Aucun client ajouté</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="p-5 flex gap-4 shrink-0 bg-white/80 backdrop-blur-sm border-t border-slate-200/50">

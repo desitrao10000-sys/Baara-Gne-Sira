@@ -153,6 +153,7 @@ export default function Home() {
               const updated = { ...selectedProject, info: updatedInfo };
               await saveProject(updated);
               setSelectedProject(updated);
+              setCurrentView("sections-landing");
             }}
             onDelete={async (projectId: string) => {
               await deleteProject(projectId);
