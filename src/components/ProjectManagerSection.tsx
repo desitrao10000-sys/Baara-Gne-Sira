@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { UserCircle2, Phone, Briefcase, ShieldCheck, Pencil, Check, X, Plus, Trash2, AlertTriangle, Users, Handshake, ChevronDown, ChevronUp } from "lucide-react";
+import { UserCircle2, Phone, Briefcase, ShieldCheck, Pencil, Check, X, Plus, Trash2, AlertTriangle, Users, Handshake, ChevronDown, ChevronUp, Zap, AlertCircle, TrendingUp, ShieldAlert } from "lucide-react";
 import { ProjectManager, ProjectMember } from "@/lib/useSupabaseProjects";
 
 interface Props {
@@ -17,7 +17,7 @@ const ACCESS_LEVELS = [
 function emptyManager(): ProjectManager { return { nomComplet: "", contact: "", role: "", niveauAcces: "editeur", membres: [], partenaires: [] }; }
 function emptyMember(): ProjectMember { return { id: crypto.randomUUID(), nom: "", prenom: "", contact: "", role: "" }; }
 
-function MemberForm({ title, icon, members, onChange, accent }: { title: string; icon: React.ReactNode; members: ProjectMember[]; onChange: (m: ProjectMember[]) => void; accent: string }) {
+function MemberForm({ title, icon, members, onChange, accent, showSwot = false }: { title: string; icon: React.ReactNode; members: ProjectMember[]; onChange: (m: ProjectMember[]) => void; accent: string; showSwot?: boolean }) {
     const [showAdd, setShowAdd] = useState(false);
     const [form, setForm] = useState<ProjectMember>(emptyMember());
     const [editId, setEditId] = useState<string | null>(null);
@@ -43,16 +43,27 @@ function MemberForm({ title, icon, members, onChange, accent }: { title: string;
             {expanded && (
                 <div className="p-3 space-y-2">
                     {members.map((m) => (
-                        <div key={m.id} className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-slate-900">{m.prenom} {m.nom}</p>
-                                {m.role && <p className="text-xs text-slate-500 font-semibold">{m.role}</p>}
-                                {m.contact && <p className="text-xs text-slate-400 font-semibold">{m.contact}</p>}
+                        <div key={m.id} className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-black text-slate-900">{m.prenom} {m.nom}</p>
+                                    {m.role && <p className="text-xs text-slate-500 font-semibold">{m.role}</p>}
+                                    {m.contact && <p className="text-xs text-slate-400 font-semibold">{m.contact}</p>}
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => startEdit(m)} title="Modifier" className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors"><Pencil size={12} className="text-purple-600" /></button>
+                                    <button onClick={() => remove(m.id)} title="Supprimer" className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"><Trash2 size={12} className="text-red-500" /></button>
+                                </div>
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                                <button onClick={() => startEdit(m)} className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors"><Pencil size={12} className="text-purple-600" /></button>
-                                <button onClick={() => remove(m.id)} className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"><Trash2 size={12} className="text-red-500" /></button>
-                            </div>
+                            {/* Affichage SWOT résumé pour les partenaires */}
+                            {showSwot && (m.force || m.faiblesse || m.opportunite || m.menace) && (
+                                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                    {m.force && <div className="bg-green-50 rounded-lg px-2 py-1 border border-green-200"><p className="text-[9px] font-black text-green-700">💪 Force</p><p className="text-[10px] text-green-800 font-semibold line-clamp-2">{m.force}</p></div>}
+                                    {m.faiblesse && <div className="bg-orange-50 rounded-lg px-2 py-1 border border-orange-200"><p className="text-[9px] font-black text-orange-700">😟 Faiblesse</p><p className="text-[10px] text-orange-800 font-semibold line-clamp-2">{m.faiblesse}</p></div>}
+                                    {m.opportunite && <div className="bg-blue-50 rounded-lg px-2 py-1 border border-blue-200"><p className="text-[9px] font-black text-blue-700">🌟 Opportunité</p><p className="text-[10px] text-blue-800 font-semibold line-clamp-2">{m.opportunite}</p></div>}
+                                    {m.menace && <div className="bg-red-50 rounded-lg px-2 py-1 border border-red-200"><p className="text-[9px] font-black text-red-700">⚠️ Menace</p><p className="text-[10px] text-red-800 font-semibold line-clamp-2">{m.menace}</p></div>}
+                                </div>
+                            )}
                         </div>
                     ))}
                     {members.length === 0 && !showAdd && <p className="text-xs text-slate-400 text-center py-2 italic">Aucun {title.toLowerCase()} ajouté</p>}
@@ -76,6 +87,32 @@ function MemberForm({ title, icon, members, onChange, accent }: { title: string;
                                 <label className="text-[11px] font-black text-purple-600 uppercase mb-0.5 block">Rôle dans le projet</label>
                                 <input type="text" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Ex: Technicien, Financeur..." inputMode="text" className="w-full p-2 rounded-lg border border-purple-200 bg-white text-sm font-semibold text-slate-900 outline-none focus:border-purple-500" />
                             </div>
+                            {/* Champs SWOT pour les partenaires */}
+                            {showSwot && (
+                                <div className="space-y-2 pt-1">
+                                    <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wider flex items-center gap-1">📊 Analyse SWOT du partenaire</p>
+                                    <div className="bg-green-50 rounded-lg p-2 border border-green-200">
+                                        <label className="text-[10px] font-black text-green-700 uppercase mb-0.5 flex items-center gap-1 block"><Zap size={10} /> 💪 Force</label>
+                                        <p className="text-[9px] text-green-600 mb-1">Ce que le partenaire peut faire pour le projet aujourd'hui</p>
+                                        <textarea value={form.force || ""} onChange={(e) => setForm({ ...form, force: e.target.value })} placeholder="Ex: Apporte un réseau de distributeurs, dispose d'un local..." rows={2} className="w-full p-2 rounded-lg border border-green-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-green-500 resize-none" />
+                                    </div>
+                                    <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
+                                        <label className="text-[10px] font-black text-orange-700 uppercase mb-0.5 flex items-center gap-1 block"><AlertCircle size={10} /> 😟 Faiblesse</label>
+                                        <p className="text-[9px] text-orange-600 mb-1">Malgré sa position, ce que le partenaire ne peut pas faire</p>
+                                        <textarea value={form.faiblesse || ""} onChange={(e) => setForm({ ...form, faiblesse: e.target.value })} placeholder="Ex: Pas de capacité financière, manque de personnel qualifié..." rows={2} className="w-full p-2 rounded-lg border border-orange-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-orange-500 resize-none" />
+                                    </div>
+                                    <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                                        <label className="text-[10px] font-black text-blue-700 uppercase mb-0.5 flex items-center gap-1 block"><TrendingUp size={10} /> 🌟 Opportunité</label>
+                                        <p className="text-[9px] text-blue-600 mb-1">Avec des efforts, ce que le partenaire pourra faire</p>
+                                        <textarea value={form.opportunite || ""} onChange={(e) => setForm({ ...form, opportunite: e.target.value })} placeholder="Ex: Pourrait étendre la distribution à la sous-région s'il obtient des fonds..." rows={2} className="w-full p-2 rounded-lg border border-blue-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-500 resize-none" />
+                                    </div>
+                                    <div className="bg-red-50 rounded-lg p-2 border border-red-200">
+                                        <label className="text-[10px] font-black text-red-700 uppercase mb-0.5 flex items-center gap-1 block"><ShieldAlert size={10} /> ⚠️ Menace</label>
+                                        <p className="text-[9px] text-red-600 mb-1">Si on n'y prend garde, ce qui pourrait nuire au projet</p>
+                                        <textarea value={form.menace || ""} onChange={(e) => setForm({ ...form, menace: e.target.value })} placeholder="Ex: Peut devenir concurrent, instabilité de sa zone..." rows={2} className="w-full p-2 rounded-lg border border-red-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-red-500 resize-none" />
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex gap-2">
                                 <button onClick={saveForm} disabled={!form.nom.trim() && !form.prenom.trim()} className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${(form.nom.trim() || form.prenom.trim()) ? "bg-purple-600 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}><Check size={13} /> {editId ? "Mettre à jour" : "Ajouter"}</button>
                                 <button onClick={cancel} className="flex-1 py-2 bg-white text-slate-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 border border-slate-200"><X size={13} /> Annuler</button>
@@ -175,12 +212,23 @@ export default function ProjectManagerSection({ manager, onSave }: Props) {
                                 <p className="text-[11px] font-black text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1"><Handshake size={12} /> Partenaires ({(manager.partenaires ?? []).length})</p>
                                 <div className="space-y-2">
                                     {(manager.partenaires ?? []).map((p) => (
-                                        <div key={p.id} className="bg-white rounded-xl p-2.5 border border-emerald-200 flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0"><Handshake size={16} className="text-emerald-600" /></div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-black text-slate-900">{p.prenom} {p.nom}</p>
-                                                <p className="text-[11px] text-slate-500 font-semibold truncate">{p.role || "—"}{p.contact ? " · " + p.contact : ""}</p>
+                                        <div key={p.id} className="bg-white rounded-xl p-2.5 border border-emerald-200">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0"><Handshake size={16} className="text-emerald-600" /></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-black text-slate-900">{p.prenom} {p.nom}</p>
+                                                    <p className="text-[11px] text-slate-500 font-semibold truncate">{p.role || "—"}{p.contact ? " · " + p.contact : ""}</p>
+                                                </div>
                                             </div>
+                                            {/* SWOT du partenaire */}
+                                            {(p.force || p.faiblesse || p.opportunite || p.menace) && (
+                                                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                                    {p.force && <div className="bg-green-50 rounded-lg px-2 py-1 border border-green-200"><p className="text-[9px] font-black text-green-700">💪 Force</p><p className="text-[10px] text-green-800 font-semibold line-clamp-2">{p.force}</p></div>}
+                                                    {p.faiblesse && <div className="bg-orange-50 rounded-lg px-2 py-1 border border-orange-200"><p className="text-[9px] font-black text-orange-700">😟 Faiblesse</p><p className="text-[10px] text-orange-800 font-semibold line-clamp-2">{p.faiblesse}</p></div>}
+                                                    {p.opportunite && <div className="bg-blue-50 rounded-lg px-2 py-1 border border-blue-200"><p className="text-[9px] font-black text-blue-700">🌟 Opportunité</p><p className="text-[10px] text-blue-800 font-semibold line-clamp-2">{p.opportunite}</p></div>}
+                                                    {p.menace && <div className="bg-red-50 rounded-lg px-2 py-1 border border-red-200"><p className="text-[9px] font-black text-red-700">⚠️ Menace</p><p className="text-[10px] text-red-800 font-semibold line-clamp-2">{p.menace}</p></div>}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -234,13 +282,14 @@ export default function ProjectManagerSection({ manager, onSave }: Props) {
                         accent="bg-blue-50 text-blue-700"
                     />
 
-                    {/* Partenaires */}
+                    {/* Partenaires avec analyse SWOT */}
                     <MemberForm
                         title="Partenaires"
                         icon={<Handshake size={15} className="text-emerald-600" />}
                         members={form.partenaires ?? []}
                         onChange={(p) => setForm({ ...form, partenaires: p })}
                         accent="bg-emerald-50 text-emerald-700"
+                        showSwot={true}
                     />
 
                     {/* Boutons */}

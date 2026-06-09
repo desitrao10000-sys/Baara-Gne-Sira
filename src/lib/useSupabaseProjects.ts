@@ -19,6 +19,11 @@ export interface ProjectMember {
     prenom: string;
     contact: string;
     role: string;
+    // Analyse SWOT (partenaires uniquement)
+    force?: string;
+    faiblesse?: string;
+    opportunite?: string;
+    menace?: string;
 }
 
 export interface ProjectManager {
