@@ -199,7 +199,7 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                                 </div>
                             ) : null)}
                             <div className="flex justify-between text-xs border-t border-amber-300 pt-1">
-                                <span className="font-black text-amber-800">Total Portefeuilles</span>
+                                <span className="font-black text-amber-800">Paiement du jour</span>
                                 <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
                             </div>
                         </div>
@@ -216,13 +216,26 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                             <span className="font-black text-red-600">{fmt(total1)} FCFA</span>
                         </div>
                     )}
-                    <div className="flex justify-between text-xs">
-                        <span className="font-bold text-slate-600">Total 2 (Encaissements)</span>
+                    {/* Rappel des totaux par source */}
+                    {total2Payments > 0 && (
+                        <div className="flex justify-between text-xs">
+                            <span className="font-bold text-indigo-600">→ Paiement client</span>
+                            <span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span>
+                        </div>
+                    )}
+                    {total2PF > 0 && (
+                        <div className="flex justify-between text-xs">
+                            <span className="font-bold text-amber-600">→ Fonds portefeuille</span>
+                            <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between text-xs border-t border-slate-200 pt-1">
+                        <span className="font-bold text-slate-600">Total général entrée</span>
                         <span className="font-black text-green-700">+{fmt(total2Combined)} FCFA</span>
                     </div>
-                    {total1 > 0 && (
+                    {showPC && total1 > 0 && (
                         <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
-                            <span className="font-black text-slate-800">Total Général (T2 - T1)</span>
+                            <span className="font-black text-slate-800">Total crédit restant</span>
                             <span className={`font-black ${totalGeneral >= 0 ? "text-green-700" : "text-red-600"}`}>
                                 {totalGeneral >= 0 ? "+" : ""}{fmt(totalGeneral)} FCFA
                             </span>
