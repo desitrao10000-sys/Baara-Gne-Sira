@@ -132,13 +132,7 @@ export default function ProjectSectionsLanding({ project, onBack, onSectionClick
                         return (
                             <button
                                 key={section.id}
-                                onClick={() => {
-                                    if (!hasProject) {
-                                        onCreateProject();
-                                    } else {
-                                        onSectionClick(section.id);
-                                    }
-                                }}
+                                onClick={() => onSectionClick(section.id)}
                                 className={`w-full rounded-2xl overflow-hidden shadow-lg ${section.shadowColor} border ${section.borderColor} active:scale-[0.98] transition-transform text-left`}
                             >
                                 {/* Barre de titre colorée */}

@@ -117,13 +117,24 @@ export default function Home() {
             project={selectedProject}
             onBack={() => { setCurrentView("project-list"); setSelectedProject(null); }}
             onSectionClick={(section) => {
-              if (section === "team" && selectedProject) {
+              // Si pas de projet, en créer un minimal automatiquement
+              let proj = selectedProject;
+              if (!proj) {
+                proj = {
+                  id: crypto.randomUUID(),
+                  info: { name: "", sector: "", location: "", zone: "", startDate: "", duration: "", description: "", objectives: "" },
+                  createdAt: new Date().toISOString(),
+                };
+                saveProject(proj);
+                setSelectedProject(proj);
+              }
+              if (section === "team") {
                 setCurrentView("section-team");
-              } else if (section === "detail" && selectedProject) {
+              } else if (section === "detail") {
                 setCurrentView("section-detail");
-              } else if (section === "business" && selectedProject) {
+              } else if (section === "business") {
                 setShowBusinessPlan(true);
-              } else if (section === "tasks" && selectedProject) {
+              } else if (section === "tasks") {
                 setCurrentView("section-tasks");
               }
             }}
