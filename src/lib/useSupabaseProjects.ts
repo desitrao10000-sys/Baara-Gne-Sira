@@ -12,6 +12,7 @@ export interface ProjectInfo {
     description: string;
     objectives: string;
     clientsJson?: string; // Liste des clients (JSON)
+    section2Completed?: boolean; // Flag indiquant que la Section 2 a été explicitement sauvegardée
 }
 
 export interface ProjectMember {

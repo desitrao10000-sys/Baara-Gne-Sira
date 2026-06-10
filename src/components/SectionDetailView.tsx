@@ -198,7 +198,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const [helpQuery, setHelpQuery] = useState("");
     const [helpResponse, setHelpResponse] = useState<string | null>(null);
     const [helpLoading, setHelpLoading] = useState(false);
-    const [showSummary, setShowSummary] = useState(!!project.info.name);
+    const [showSummary, setShowSummary] = useState(!!project.info.section2Completed);
 
     const [clients, setClients] = useState<ClientInfo[]>(() => {
         try { return form.clientsJson ? JSON.parse(form.clientsJson) : []; } catch { return []; }
@@ -211,7 +211,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const currentStep = steps[step];
     const totalSteps = steps.length;
     const progress = ((step + 1) / totalSteps) * 100;
-    const currentValue = form[currentStep?.id] ?? "";
+    const currentValue = (form[currentStep?.id] ?? "") as string;
 
     const updateField = (value: string) => setForm((prev) => ({ ...prev, [currentStep.id]: value }));
     const canGoNext = () => isClientStep || currentValue.trim() !== "";
@@ -340,7 +340,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
                     <button onClick={() => setShowSummary(false)} className="flex-1 py-3.5 rounded-2xl font-extrabold text-slate-600 bg-slate-100 flex items-center justify-center gap-2 active:scale-95 transition-transform">
                         <Edit3 size={20} /> Modifier
                     </button>
-                    <button onClick={() => onSave(form)} className="flex-1 py-3.5 rounded-2xl font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-all bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30">
+                    <button onClick={() => onSave({ ...form, section2Completed: true })} className="flex-1 py-3.5 rounded-2xl font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-all bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30">
                         <Save size={20} /> Enregistrer
                     </button>
                 </div>

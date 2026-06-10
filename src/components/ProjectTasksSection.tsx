@@ -96,6 +96,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
         onSave(updated);
         setShowForm(false);
         setEditingTask(null);
+        setExpandedId(form.id); // Auto-expand pour voir le budget
     };
 
     const deleteTask = (id: string) => {
@@ -265,6 +266,27 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                                             </button>
                                         </div>
                                     </div>
+                                    {/* Résumé budget sur la carte */}
+                                    {(totalEP > 0 || totalSP > 0 || totalER > 0 || totalSR > 0) && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {soldePrevTask !== 0 && (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${soldePrevTask >= 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-600"}`}>
+                                                    📊 Prév. : {soldePrevTask >= 0 ? "+" : ""}{fmt(soldePrevTask)}
+                                                </span>
+                                            )}
+                                            {(totalER > 0 || totalSR > 0) && (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${soldeReelTask >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                                                    💰 Réel : {soldeReelTask >= 0 ? "+" : ""}{fmt(soldeReelTask)}
+                                                </span>
+                                            )}
+                                            {(totalER > 0 || totalSR > 0) && ecartTask !== 0 && (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${ecartTask >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
+                                                    {ecartTask >= 0 ? "✅" : "⚠️"} Écart : {ecartTask >= 0 ? "+" : ""}{fmt(ecartTask)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* Changer statut */}
                                     <div className="flex gap-1.5 mt-3 flex-wrap">
                                         {STATUTS.map((s) => (
