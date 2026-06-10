@@ -1132,7 +1132,7 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
         primeSectorielle: "", primePays: "", tauxIS: "", dureeAmortissement: "",
         caAnnees: "[]", chargesVariables: "", chargesFixes: "", chargesFinancieres: "",
     });
-    const [mode, setMode] = useState<"wizard" | "review">("wizard");
+    const [mode, setMode] = useState<"wizard" | "review">(initialData && initialData.investissementMateriel ? "review" : "wizard");
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const [editLineItems, setEditLineItems] = useState<Array<{ desig: string; montant: string }>>([]);
