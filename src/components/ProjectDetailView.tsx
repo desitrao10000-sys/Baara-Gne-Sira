@@ -186,6 +186,36 @@ export default function ProjectDetailView({ project, onBack, onSave, onDelete, o
                                     <div className="flex-1"><p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-1">Objectifs</p><p className="text-sm font-semibold text-slate-800 leading-relaxed">{info.objectives}</p></div>
                                 </div>
                             )}
+                            {/* Clients */}
+                            {info.clientsJson && (() => {
+                                try {
+                                    const clients = JSON.parse(info.clientsJson);
+                                    if (!Array.isArray(clients) || clients.length === 0) return null;
+                                    return (
+                                        <div className="px-4 py-3">
+                                            <p className="text-[10px] font-black text-yellow-600 uppercase tracking-wider mb-2">👥 Clients ({clients.length})</p>
+                                            <div className="space-y-2">
+                                                {clients.map((c: any, i: number) => (
+                                                    <div key={c.id || i} className="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-[10px] font-black text-white bg-teal-600 rounded-full w-5 h-5 flex items-center justify-center shrink-0">{i + 1}</span>
+                                                            <span className="text-xs font-black text-slate-900">{c.nom}</span>
+                                                            {c.telephone && <span className="text-[10px] text-slate-500 ml-auto">📞 {c.telephone}</span>}
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-1 text-[10px] ml-7">
+                                                            {c.typeClient && <div><span className="text-slate-400 font-bold">Type: </span><span className="text-slate-700 font-semibold">{c.typeClient}</span></div>}
+                                                            {c.modePaiement && <div><span className="text-slate-400 font-bold">Paiement: </span><span className="text-slate-700 font-semibold">{c.modePaiement}</span></div>}
+                                                            {c.montantMoyen && <div><span className="text-slate-400 font-bold">Montant moy.: </span><span className="text-slate-700 font-semibold">{c.montantMoyen}</span></div>}
+                                                            {c.frequenceAchat && <div><span className="text-slate-400 font-bold">Fréquence: </span><span className="text-slate-700 font-semibold">{c.frequenceAchat}</span></div>}
+                                                            {c.plafondAutorise && <div className="col-span-2"><span className="text-slate-400 font-bold">Plafond crédit: </span><span className="text-red-600 font-semibold">{c.plafondAutorise}</span></div>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                } catch { return null; }
+                            })()}
                         </div>
                     </div>
                 </div>

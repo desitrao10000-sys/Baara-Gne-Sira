@@ -198,7 +198,7 @@ export default function SectionDetailView({ project, onBack, onSave }: SectionDe
     const [helpQuery, setHelpQuery] = useState("");
     const [helpResponse, setHelpResponse] = useState<string | null>(null);
     const [helpLoading, setHelpLoading] = useState(false);
-    const [showSummary, setShowSummary] = useState(false);
+    const [showSummary, setShowSummary] = useState(!!project.info.name);
 
     const [clients, setClients] = useState<ClientInfo[]>(() => {
         try { return form.clientsJson ? JSON.parse(form.clientsJson) : []; } catch { return []; }

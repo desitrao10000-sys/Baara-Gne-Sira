@@ -29,6 +29,7 @@ export interface ProjectInfo {
     duration: string;
     description: string;
     objectives: string;
+    clientsJson?: string;
 }
 
 interface Suggestion {
@@ -306,14 +307,14 @@ export default function ProjectCreationWizard({
     const totalSteps = questions.length;
     const progress = ((step + 1) / totalSteps) * 100;
 
-    const currentValue = data[currentQuestion.id];
+    const currentValue = data[currentQuestion.id] ?? "";
 
     const updateField = (value: string) => {
         setData((prev) => ({ ...prev, [currentQuestion.id]: value }));
     };
 
     const canGoNext = () => {
-        return currentValue.trim() !== "";
+        return currentValue?.trim() !== "";
     };
 
     const resetHelp = () => { setShowHelp(false); setHelpQuery(""); setHelpResponse(null); };
