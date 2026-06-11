@@ -43,6 +43,15 @@ export interface BudgetItem {
     montant: number;
 }
 
+export interface PaymentHistoryEntry {
+    id: string;
+    date: string;
+    type: "credit" | "paiement" | "retrait_pf";
+    label: string;
+    montant: number;
+    details?: string;
+}
+
 export interface ProjectTask {
     id: string;
     designation: string;
@@ -56,6 +65,7 @@ export interface ProjectTask {
     budgetSortiesPrev: BudgetItem[];
     budgetEntreesReel: BudgetItem[];
     budgetSortiesReel: BudgetItem[];
+    paymentHistory?: PaymentHistoryEntry[];
     risques: string;
     suggestionResolution: string;
     commentaires: string;

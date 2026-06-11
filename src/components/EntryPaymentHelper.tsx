@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Check, Wallet, CreditCard } from "lucide-react";
+import { Plus, X, Check, Wallet, CreditCard, History } from "lucide-react";
+import { PaymentHistoryEntry } from "@/lib/useSupabaseProjects";
 
 interface CreditRow { id: string; designation: string; montant: number; }
 interface PaymentRow { id: string; designation: string; montant: number; }
@@ -8,74 +9,52 @@ interface PaymentRow { id: string; designation: string; montant: number; }
 interface Props {
     onValidate: (items: { designation: string; montant: number }[]) => void;
     initialItems?: { designation: string; montant: number }[];
+    history?: PaymentHistoryEntry[];
+    onHistoryChange?: (history: PaymentHistoryEntry[]) => void;
 }
 
-export default function EntryPaymentHelper({ onValidate, initialItems }: Props) {
+export default function EntryPaymentHelper({ onValidate, initialItems, history = [], onHistoryChange }: Props) {
     const [showPC, setShowPC] = useState(false);
     const [showFP, setShowFP] = useState(false);
-
-    // Paiement Client state
+    const [showHistory, setShowHistory] = useState(false);
     const [credits, setCredits] = useState<CreditRow[]>([]);
     const [payments, setPayments] = useState<PaymentRow[]>([]);
-
-    // Fonds Portefeuille state
     const [selectedPF, setSelectedPF] = useState<number | null>(null);
     const [pfTotals, setPfTotals] = useState([0, 0, 0, 0]);
     const [pfWithdraw, setPfWithdraw] = useState(0);
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
-
-    // Flag pour ignorer le premier render (restauration données initiales)
     const initialized = useRef(false);
 
-    // Restaurer les données initiales (quand on édite une tâche existante)
+    const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string) => {
+        if (!onHistoryChange || montant <= 0) return;
+        onHistoryChange([...history, { id: crypto.randomUUID(), date: new Date().toISOString(), type, label, montant, details }]);
+    };
+
     useEffect(() => {
         if (initialized.current || !initialItems || initialItems.length === 0) return;
         initialized.current = true;
-
         let restoredPayments = 0;
         const restoredWithdraws = [0, 0, 0, 0];
-
         initialItems.forEach(item => {
-            if (item.designation === "Paiement client" && item.montant > 0) {
-                restoredPayments += item.montant;
-            } else if (item.designation.startsWith("Fonds Portefeuille ") && item.montant > 0) {
+            if (item.designation === "Paiement client" && item.montant > 0) restoredPayments += item.montant;
+            else if (item.designation.startsWith("Fonds Portefeuille ") && item.montant > 0) {
                 const idx = parseInt(item.designation.replace("Fonds Portefeuille ", "")) - 1;
                 if (idx >= 0 && idx < 4) restoredWithdraws[idx] = item.montant;
             }
         });
-
-        if (restoredPayments > 0) {
-            setPayments([{ id: crypto.randomUUID(), designation: "Paiement client restauré", montant: restoredPayments }]);
-            setShowPC(true);
-        }
-        if (restoredWithdraws.some(w => w > 0)) {
-            setPfWithdraws(restoredWithdraws);
-            setShowFP(true);
-        }
+        if (restoredPayments > 0) { setPayments([{ id: crypto.randomUUID(), designation: "Paiement client restauré", montant: restoredPayments }]); setShowPC(true); }
+        if (restoredWithdraws.some(w => w > 0)) { setPfWithdraws(restoredWithdraws); setShowFP(true); }
     }, [initialItems]);
 
     const uid = () => crypto.randomUUID();
-
-    // Paiement Client totals
     const total1 = credits.reduce((s, c) => s + (c.montant || 0), 0);
     const total2Payments = payments.reduce((s, p) => s + (p.montant || 0), 0);
-
-    // Portefeuille totals
     const total2PF = pfWithdraws.reduce((s, w) => s + w, 0);
 
-    // Auto-valider : envoie TOUJOURS les données au parent, que la section soit ouverte ou non
     useEffect(() => {
         const items: { designation: string; montant: number }[] = [];
-        // Toujours inclure les paiements, même si showPC est fermé
-        if (total2Payments > 0) {
-            items.push({ designation: "Paiement client", montant: total2Payments });
-        }
-        // Toujours inclure les retraits, même si showFP est fermé
-        if (total2PF > 0) {
-            pfWithdraws.forEach((w, i) => {
-                if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
-            });
-        }
+        if (total2Payments > 0) items.push({ designation: "Paiement client", montant: total2Payments });
+        if (total2PF > 0) pfWithdraws.forEach((w, i) => { if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w }); });
         if (items.length > 0) onValidate(items);
     }, [total2Payments, total2PF, pfWithdraws]);
 
@@ -88,20 +67,73 @@ export default function EntryPaymentHelper({ onValidate, initialItems }: Props) 
 
     const confirmPFWithdraw = () => {
         if (selectedPF === null || pfWithdraw <= 0) return;
-        const pfIdx = selectedPF;
-        if (pfWithdraw > pfTotals[pfIdx] - pfWithdraws[pfIdx]) return;
-        setPfWithdraws(ws => ws.map((w, i) => i === pfIdx ? w + pfWithdraw : w));
+        if (pfWithdraw > pfTotals[selectedPF] - pfWithdraws[selectedPF]) return;
+        addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, `Solde: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} → ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF] - pfWithdraw)}`);
+        setPfWithdraws(ws => ws.map((w, i) => i === selectedPF ? w + pfWithdraw : w));
         setPfWithdraw(0);
     };
 
-    const fmt = (n: number) => n.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+    const removePayment = (id: string) => {
+        const p = payments.find(x => x.id === id);
+        if (p && p.montant > 0) addHistory("paiement", `Suppression: ${p.designation || "Paiement"}`, -p.montant);
+        setPayments(ps => ps.filter(x => x.id !== id));
+    };
+    const removeCredit = (id: string) => {
+        const c = credits.find(x => x.id === id);
+        if (c && c.montant > 0) addHistory("credit", `Suppression crédit: ${c.designation || "Crédit"}`, -c.montant);
+        setCredits(cs => cs.filter(x => x.id !== id));
+    };
+    const commitPaymentAmount = (id: string, oldVal: number) => {
+        const p = payments.find(x => x.id === id);
+        if (p && p.montant !== oldVal && p.montant > 0) {
+            addHistory("paiement", p.designation || "Paiement client", p.montant - oldVal, oldVal > 0 ? `${fmt(oldVal)} → ${fmt(p.montant)}` : `Nouveau: ${fmt(p.montant)}`);
+        }
+    };
 
+    const fmt = (n: number) => n.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return d; } };
     const inputCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-400";
     const amtCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 outline-none focus:border-blue-400";
 
+    const renderHistorySection = () => {
+        if (!showHistory) return null;
+        return (
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-2">
+                <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                    <History size={12} /> Historique des transactions
+                </p>
+                {history.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 font-semibold text-center py-3">Aucune transaction enregistrée</p>
+                ) : (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {[...history].reverse().map(entry => (
+                            <div key={entry.id} className={`rounded-lg p-2 border text-xs space-y-0.5 ${entry.type === "credit" ? "bg-red-50 border-red-200" : entry.type === "paiement" ? "bg-indigo-50 border-indigo-200" : "bg-amber-50 border-amber-200"}`}>
+                                <div className="flex justify-between items-center">
+                                    <span className={`font-black ${entry.type === "credit" ? "text-red-700" : entry.type === "paiement" ? "text-indigo-700" : "text-amber-700"}`}>
+                                        {entry.type === "credit" ? "📋" : entry.type === "paiement" ? "💰" : "📁"} {entry.label}
+                                    </span>
+                                    <span className={`font-black ${entry.montant >= 0 ? "text-green-700" : "text-red-600"}`}>
+                                        {entry.montant >= 0 ? "+" : ""}{fmt(entry.montant)} FCFA
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-semibold">{fmtDate(entry.date)}</p>
+                                {entry.details && <p className="text-[10px] text-slate-500">{entry.details}</p>}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {history.length > 0 && (
+                    <div className="flex justify-between text-xs border-t border-slate-200 pt-2">
+                        <span className="font-black text-slate-600">{history.length} transaction(s)</span>
+                        <span className="font-black text-slate-600">Total cumulé: {fmt(history.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0))} FCFA</span>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-2 mt-2">
-            {/* Deux boutons */}
             <div className="flex gap-2">
                 <button onClick={() => setShowPC(!showPC)} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 transition-all ${showPC ? "bg-indigo-600 text-white border-indigo-600" : "bg-indigo-50 text-indigo-700 border-indigo-200"}`}>
                     <CreditCard size={14} /> Paiement Client
@@ -109,12 +141,13 @@ export default function EntryPaymentHelper({ onValidate, initialItems }: Props) 
                 <button onClick={() => setShowFP(!showFP)} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 transition-all ${showFP ? "bg-amber-500 text-white border-amber-500" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
                     <Wallet size={14} /> Fonds Portefeuille
                 </button>
+                <button onClick={() => setShowHistory(!showHistory)} title="Historique des transactions" className={`px-3 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 border-2 transition-all ${showHistory ? "bg-slate-700 text-white border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                    <History size={14} />
+                </button>
             </div>
 
-            {/* PAIEMENT CLIENT */}
             {showPC && (
                 <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-200 space-y-3">
-                    {/* État de crédit */}
                     <div>
                         <p className="text-[11px] font-black text-indigo-700 mb-2">📋 État de crédit</p>
                         <div className="space-y-1.5">
@@ -122,157 +155,69 @@ export default function EntryPaymentHelper({ onValidate, initialItems }: Props) 
                                 <div key={c.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
                                     <input type="text" value={c.designation} onChange={e => updateCredit(c.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
                                     <input type="text" inputMode="numeric" value={c.montant || ""} onChange={e => updateCredit(c.id, "montant", e.target.value)} placeholder="Crédit" className={amtCls} />
-                                    <button onClick={() => setCredits(cs => cs.filter(x => x.id !== c.id))} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
+                                    <button onClick={() => removeCredit(c.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
                                 </div>
                             ))}
-                            <button onClick={() => setCredits([...credits, { id: uid(), designation: "", montant: 0 }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-[11px] font-bold flex items-center justify-center gap-1">
-                                <Plus size={12} /> Ajouter crédit
-                            </button>
+                            <button onClick={() => setCredits([...credits, { id: uid(), designation: "", montant: 0 }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-[11px] font-bold flex items-center justify-center gap-1"><Plus size={12} /> Ajouter crédit</button>
                         </div>
-                        {credits.length > 0 && (
-                            <div className="flex justify-between text-xs border-t border-indigo-200 pt-2 mt-2">
-                                <span className="font-black text-indigo-700">Total 1 (Crédits)</span>
-                                <span className="font-black text-red-600">{fmt(total1)} FCFA</span>
-                            </div>
-                        )}
+                        {credits.length > 0 && (<div className="flex justify-between text-xs border-t border-indigo-200 pt-2 mt-2"><span className="font-black text-indigo-700">Total 1 (Crédits)</span><span className="font-black text-red-600">{fmt(total1)} FCFA</span></div>)}
                     </div>
-
-                    {/* Paiement du jour */}
                     <div>
                         <p className="text-[11px] font-black text-indigo-700 mb-2">💰 Paiement du jour</p>
                         <div className="space-y-1.5">
-                            {payments.map(p => (
-                                <div key={p.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
-                                    <input type="text" value={p.designation} onChange={e => updatePayment(p.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
-                                    <input type="text" inputMode="numeric" value={p.montant || ""} onChange={e => updatePayment(p.id, "montant", e.target.value)} placeholder="Montant" className={amtCls} />
-                                    <button onClick={() => setPayments(ps => ps.filter(x => x.id !== p.id))} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
-                                </div>
-                            ))}
-                            <button onClick={() => setPayments([...payments, { id: uid(), designation: "", montant: 0 }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-[11px] font-bold flex items-center justify-center gap-1">
-                                <Plus size={12} /> Ajouter paiement
-                            </button>
+                            {payments.map(p => {
+                                const oldVal = p.montant; return (
+                                    <div key={p.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
+                                        <input type="text" value={p.designation} onChange={e => updatePayment(p.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
+                                        <input type="text" inputMode="numeric" value={p.montant || ""} onChange={e => updatePayment(p.id, "montant", e.target.value)} onBlur={() => commitPaymentAmount(p.id, oldVal)} placeholder="Montant" className={amtCls} />
+                                        <button onClick={() => removePayment(p.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
+                                    </div>);
+                            })}
+                            <button onClick={() => setPayments([...payments, { id: uid(), designation: "", montant: 0 }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-[11px] font-bold flex items-center justify-center gap-1"><Plus size={12} /> Ajouter paiement</button>
                         </div>
-                        {payments.length > 0 && (
-                            <div className="flex justify-between text-xs border-t border-indigo-200 pt-2 mt-2">
-                                <span className="font-black text-indigo-700">Total 2 (Paiements)</span>
-                                <span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span>
-                            </div>
-                        )}
+                        {payments.length > 0 && (<div className="flex justify-between text-xs border-t border-indigo-200 pt-2 mt-2"><span className="font-black text-indigo-700">Total 2 (Paiements)</span><span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span></div>)}
                     </div>
                 </div>
             )}
 
-            {/* RÉSUMÉ GLOBAL — Total général entrée */}
             {(showPC || showFP) && (credits.length > 0 || payments.length > 0 || pfWithdraws.some(w => w > 0)) && (
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-1">
-                    {showPC && total1 > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-slate-600">Total 1 (Crédits clients)</span>
-                            <span className="font-black text-red-600">{fmt(total1)} FCFA</span>
-                        </div>
-                    )}
-                    {total2Payments > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-indigo-600">→ Paiement client</span>
-                            <span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span>
-                        </div>
-                    )}
-                    {total2PF > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-amber-600">→ Fonds portefeuille</span>
-                            <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
-                        </div>
-                    )}
-                    {showPC && total1 > 0 && (() => {
-                        const creditRestant = total1 - total2Payments;
-                        return (
-                            <div className="flex justify-between text-sm border-t border-slate-300 pt-2">
-                                <span className="font-black text-slate-800">Total crédit restant</span>
-                                <span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>
-                                    {creditRestant > 0 ? fmt(creditRestant) : "0"} FCFA
-                                </span>
-                            </div>
-                        );
-                    })()}
-                    {(() => {
-                        const total2Combined = total2Payments + total2PF;
-                        return total2Combined > 0 ? (
-                            <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
-                                <span className="font-black text-slate-800">Total général entrée</span>
-                                <span className="font-black text-green-700 text-base">+{fmt(total2Combined)} FCFA</span>
-                            </div>
-                        ) : null;
-                    })()}
+                    {showPC && total1 > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-slate-600">Total 1 (Crédits clients)</span><span className="font-black text-red-600">{fmt(total1)} FCFA</span></div>)}
+                    {total2Payments > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-indigo-600">→ Paiement client</span><span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span></div>)}
+                    {total2PF > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-amber-600">→ Fonds portefeuille</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>)}
+                    {showPC && total1 > 0 && (() => { const r = total1 - total2Payments; return (<div className="flex justify-between text-sm border-t border-slate-300 pt-2"><span className="font-black text-slate-800">Total crédit restant</span><span className={`font-black ${r > 0 ? "text-red-600" : "text-green-700"}`}>{r > 0 ? fmt(r) : "0"} FCFA</span></div>); })()}
+                    {(() => { const t = total2Payments + total2PF; return t > 0 ? (<div className="flex justify-between text-sm border-t border-slate-200 pt-2"><span className="font-black text-slate-800">Total général entrée</span><span className="font-black text-green-700 text-base">+{fmt(t)} FCFA</span></div>) : null; })()}
                 </div>
             )}
 
-            {/* FONDS PORTEFEUILLE */}
             {showFP && (
                 <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 space-y-3">
                     <p className="text-[11px] font-black text-amber-700 mb-2">📁 Choisir un portefeuille</p>
                     <div className="grid grid-cols-4 gap-1.5">
-                        {[0, 1, 2, 3].map(i => (
-                            <button key={i} onClick={() => setSelectedPF(selectedPF === i ? null : i)}
-                                className={`py-2 rounded-xl text-[11px] font-black border-2 transition-all ${selectedPF === i ? "bg-amber-500 text-white border-amber-500" : "bg-white text-amber-700 border-amber-200"}`}>
-                                P.{i + 1}
-                            </button>
-                        ))}
+                        {[0, 1, 2, 3].map(i => (<button key={i} onClick={() => setSelectedPF(selectedPF === i ? null : i)} className={`py-2 rounded-xl text-[11px] font-black border-2 transition-all ${selectedPF === i ? "bg-amber-500 text-white border-amber-500" : "bg-white text-amber-700 border-amber-200"}`}>P.{i + 1}</button>))}
                     </div>
-
                     {selectedPF !== null && (
                         <div className="bg-white rounded-xl p-3 border border-amber-200 space-y-2">
-                            <div className="flex justify-between text-xs">
-                                <span className="font-bold text-amber-700">Portefeuille {selectedPF + 1} — Montant total</span>
-                                <span className="font-black text-amber-800">{fmt(pfTotals[selectedPF])} FCFA</span>
-                            </div>
-                            <input type="text" inputMode="numeric"
-                                value={pfTotals[selectedPF] || ""}
-                                onChange={e => {
-                                    const v = parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0;
-                                    setPfTotals(ts => ts.map((t, idx) => idx === selectedPF ? v : t));
-                                }}
-                                placeholder="Définir le montant total du portefeuille"
-                                className={amtCls} />
-                            <div className="flex justify-between text-xs text-slate-500">
-                                <span>Déjà retiré</span>
-                                <span className="font-bold">{fmt(pfWithdraws[selectedPF])} FCFA</span>
-                            </div>
+                            <div className="flex justify-between text-xs"><span className="font-bold text-amber-700">Portefeuille {selectedPF + 1} — Montant total</span><span className="font-black text-amber-800">{fmt(pfTotals[selectedPF])} FCFA</span></div>
+                            <input type="text" inputMode="numeric" value={pfTotals[selectedPF] || ""} onChange={e => { const v = parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0; setPfTotals(ts => ts.map((t, idx) => idx === selectedPF ? v : t)); }} placeholder="Définir le montant total du portefeuille" className={amtCls} />
+                            <div className="flex justify-between text-xs text-slate-500"><span>Déjà retiré</span><span className="font-bold">{fmt(pfWithdraws[selectedPF])} FCFA</span></div>
                             <div className="flex gap-1.5 items-end">
-                                <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-amber-600 block mb-0.5">Montant à retirer</label>
-                                    <input type="text" inputMode="numeric" value={pfWithdraw || ""} onChange={e => setPfWithdraw(parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0)} placeholder="0" className={amtCls} />
-                                </div>
-                                <button onClick={confirmPFWithdraw} disabled={pfWithdraw <= 0} title="Confirmer le retrait" className={`px-3 py-2 rounded-xl text-xs font-bold ${pfWithdraw > 0 ? "bg-amber-500 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}>
-                                    <Check size={14} />
-                                </button>
+                                <div className="flex-1"><label className="text-[10px] font-bold text-amber-600 block mb-0.5">Montant à retirer</label><input type="text" inputMode="numeric" value={pfWithdraw || ""} onChange={e => setPfWithdraw(parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0)} placeholder="0" className={amtCls} /></div>
+                                <button onClick={confirmPFWithdraw} disabled={pfWithdraw <= 0} title="Confirmer le retrait" className={`px-3 py-2 rounded-xl text-xs font-bold ${pfWithdraw > 0 ? "bg-amber-500 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Check size={14} /></button>
                             </div>
-                            <div className="flex justify-between text-xs border-t border-amber-200 pt-2">
-                                <span className="font-black text-amber-700">Nouveau solde</span>
-                                <span className={`font-black ${pfTotals[selectedPF] - pfWithdraws[selectedPF] >= 0 ? "text-green-700" : "text-red-600"}`}>
-                                    {fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} FCFA
-                                </span>
-                            </div>
+                            <div className="flex justify-between text-xs border-t border-amber-200 pt-2"><span className="font-black text-amber-700">Nouveau solde</span><span className={`font-black ${pfTotals[selectedPF] - pfWithdraws[selectedPF] >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} FCFA</span></div>
                         </div>
                     )}
-
-                    {/* Résumé portefeuilles */}
                     {pfWithdraws.some(w => w > 0) && (
                         <div className="space-y-1">
-                            {pfWithdraws.map((w, i) => w > 0 ? (
-                                <div key={i} className="flex justify-between text-xs bg-white rounded-lg p-2 border border-amber-200">
-                                    <span className="font-bold text-amber-700">Portefeuille {i + 1}</span>
-                                    <span className="font-black text-green-700">+{fmt(w)} FCFA</span>
-                                </div>
-                            ) : null)}
-                            <div className="flex justify-between text-xs border-t border-amber-300 pt-1">
-                                <span className="font-black text-amber-800">Paiement du jour</span>
-                                <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
-                            </div>
+                            {pfWithdraws.map((w, i) => w > 0 ? (<div key={i} className="flex justify-between text-xs bg-white rounded-lg p-2 border border-amber-200"><span className="font-bold text-amber-700">Portefeuille {i + 1}</span><span className="font-black text-green-700">+{fmt(w)} FCFA</span></div>) : null)}
+                            <div className="flex justify-between text-xs border-t border-amber-300 pt-1"><span className="font-black text-amber-800">Paiement du jour</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>
                         </div>
                     )}
                 </div>
             )}
 
+            {renderHistorySection()}
         </div>
     );
 }

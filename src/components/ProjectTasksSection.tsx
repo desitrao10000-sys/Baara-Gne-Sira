@@ -44,6 +44,7 @@ function migrateTask(t: any): ProjectTask {
         risques: t.risques || "",
         suggestionResolution: t.suggestionResolution || "",
         commentaires: t.commentaires || "",
+        paymentHistory: Array.isArray(t.paymentHistory) ? t.paymentHistory : [],
     };
 }
 
@@ -57,6 +58,7 @@ function emptyTask(): ProjectTask {
         budgetEntreesReel: [],
         budgetSortiesReel: [],
         risques: "", suggestionResolution: "", commentaires: "",
+        paymentHistory: [],
     };
 }
 
@@ -452,6 +454,8 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                         {/* Helper Paiement Client / Fonds Portefeuille */}
                         <EntryPaymentHelper
                             initialItems={editingTask ? form.budgetEntreesPrev.map(it => ({ designation: it.designation, montant: it.montant })) : undefined}
+                            history={form.paymentHistory || []}
+                            onHistoryChange={(h) => setForm(prev => ({ ...prev, paymentHistory: h }))}
                             onValidate={(items) => {
                                 const newItems = items.map(it => ({ id: crypto.randomUUID(), designation: it.designation, montant: it.montant }));
                                 setForm(prev => ({ ...prev, budgetEntreesPrev: newItems }));
