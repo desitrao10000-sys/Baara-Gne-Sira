@@ -49,6 +49,8 @@ export interface PaymentHistoryEntry {
     type: "credit" | "paiement" | "retrait_pf";
     label: string;
     montant: number;
+    designation?: string;
+    soldeAfter?: number;
     details?: string;
 }
 

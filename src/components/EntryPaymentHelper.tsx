@@ -25,9 +25,10 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
     const initialized = useRef(false);
 
-    const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string) => {
-        if (!onHistoryChange || montant <= 0) return;
-        onHistoryChange([...history, { id: crypto.randomUUID(), date: new Date().toISOString(), type, label, montant, details }]);
+    const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string, designation?: string) => {
+        if (!onHistoryChange) return;
+        const totalEntree = (payments.reduce((s, p) => s + (p.montant || 0), 0)) + (pfWithdraws.reduce((s, w) => s + w, 0));
+        onHistoryChange([...history, { id: crypto.randomUUID(), date: new Date().toISOString(), type, label, montant, designation, soldeAfter: totalEntree + (montant > 0 ? montant : 0), details }]);
     };
 
     useEffect(() => {
@@ -91,41 +92,92 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     };
 
     const fmt = (n: number) => n.toLocaleString("fr-FR", { maximumFractionDigits: 0 });
-    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return d; } };
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }); } catch { return d; } };
+    const fmtTime = (d: string) => { try { return new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); } catch { return ""; } };
+    const fmtDateTime = (d: string) => `${fmtDate(d)} à ${fmtTime(d)}`;
+    const fmtDay = (d: string) => { try { return new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }); } catch { return fmtDate(d); } };
     const inputCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-400";
     const amtCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 outline-none focus:border-blue-400";
 
     const renderHistorySection = () => {
         if (!showHistory) return null;
+        // Regrouper par jour
+        const dayMap = new Map<string, PaymentHistoryEntry[]>();
+        [...history].reverse().forEach(entry => {
+            const dayKey = fmtDay(entry.date);
+            if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
+            dayMap.get(dayKey)!.push(entry);
+        });
+        const totalIn = history.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0);
+        const totalOut = history.filter(h => h.montant < 0).reduce((s, h) => s + Math.abs(h.montant), 0);
         return (
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-2">
-                <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                    <History size={12} /> Historique des transactions
-                </p>
+            <div className="bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl p-4 border-2 border-slate-300 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between">
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5"><History size={14} className="text-slate-600" /> Historique des transactions</p>
+                    {history.length > 0 && <span className="text-[10px] font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{history.length}</span>}
+                </div>
                 {history.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 font-semibold text-center py-3">Aucune transaction enregistrée</p>
+                    <div className="text-center py-6 space-y-1">
+                        <History size={24} className="text-slate-300 mx-auto" />
+                        <p className="text-xs text-slate-400 font-bold">Aucune transaction enregistrée</p>
+                        <p className="text-[10px] text-slate-300">Les paiements et retraits apparaîtront ici</p>
+                    </div>
                 ) : (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {[...history].reverse().map(entry => (
-                            <div key={entry.id} className={`rounded-lg p-2 border text-xs space-y-0.5 ${entry.type === "credit" ? "bg-red-50 border-red-200" : entry.type === "paiement" ? "bg-indigo-50 border-indigo-200" : "bg-amber-50 border-amber-200"}`}>
-                                <div className="flex justify-between items-center">
-                                    <span className={`font-black ${entry.type === "credit" ? "text-red-700" : entry.type === "paiement" ? "text-indigo-700" : "text-amber-700"}`}>
-                                        {entry.type === "credit" ? "📋" : entry.type === "paiement" ? "💰" : "📁"} {entry.label}
-                                    </span>
-                                    <span className={`font-black ${entry.montant >= 0 ? "text-green-700" : "text-red-600"}`}>
-                                        {entry.montant >= 0 ? "+" : ""}{fmt(entry.montant)} FCFA
-                                    </span>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                        {Array.from(dayMap.entries()).map(([dayLabel, entries]) => (
+                            <div key={dayLabel} className="space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-px flex-1 bg-slate-300" />
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2">{dayLabel}</span>
+                                    <div className="h-px flex-1 bg-slate-300" />
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-semibold">{fmtDate(entry.date)}</p>
-                                {entry.details && <p className="text-[10px] text-slate-500">{entry.details}</p>}
+                                {entries.map(entry => {
+                                    const isCredit = entry.type === "credit";
+                                    const isPF = entry.type === "retrait_pf";
+                                    const icon = isCredit ? "📋" : isPF ? "📁" : "💰";
+                                    const bgCard = isCredit ? "bg-red-50 border-red-200" : isPF ? "bg-amber-50 border-amber-200" : "bg-indigo-50 border-indigo-200";
+                                    const titleColor = isCredit ? "text-red-700" : isPF ? "text-amber-700" : "text-indigo-700";
+                                    return (
+                                        <div key={entry.id} className={`rounded-xl p-2.5 border ${bgCard} space-y-1.5 shadow-sm`}>
+                                            <div className="flex justify-between items-start gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-[11px] font-black ${titleColor} flex items-center gap-1`}>
+                                                        <span>{icon}</span> <span className="truncate">{entry.label}</span>
+                                                    </p>
+                                                    {entry.designation && <p className="text-[10px] font-semibold text-slate-500 truncate">📌 {entry.designation}</p>}
+                                                </div>
+                                                <span className={`text-xs font-black shrink-0 ${entry.montant >= 0 ? "text-green-700" : "text-red-600"}`}>
+                                                    {entry.montant >= 0 ? "+" : ""}{fmt(entry.montant)} FCFA
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-semibold">
+                                                <span>🕐 {fmtTime(entry.date)}</span>
+                                                {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && (
+                                                    <span className="text-green-600">│ Solde: {fmt(entry.soldeAfter)} FCFA</span>
+                                                )}
+                                            </div>
+                                            {entry.details && <p className="text-[10px] text-slate-500 bg-white/60 rounded-lg px-2 py-1 font-medium">{entry.details}</p>}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ))}
                     </div>
                 )}
                 {history.length > 0 && (
-                    <div className="flex justify-between text-xs border-t border-slate-200 pt-2">
-                        <span className="font-black text-slate-600">{history.length} transaction(s)</span>
-                        <span className="font-black text-slate-600">Total cumulé: {fmt(history.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0))} FCFA</span>
+                    <div className="grid grid-cols-3 gap-2 border-t-2 border-slate-200 pt-2">
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-green-700 uppercase">Entrées</p>
+                            <p className="text-xs font-black text-green-700">+{fmt(totalIn)}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-red-600 uppercase">Sorties</p>
+                            <p className="text-xs font-black text-red-600">-{fmt(totalOut)}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-700 uppercase">Net</p>
+                            <p className={`text-xs font-black ${totalIn - totalOut >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(totalIn - totalOut)} FCFA</p>
+                        </div>
                     </div>
                 )}
             </div>
