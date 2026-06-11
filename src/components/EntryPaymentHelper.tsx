@@ -1,10 +1,9 @@
 "use client";
-import { useState } from "react";
-import { Plus, X, Check, Wallet, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Check, Wallet, CreditCard } from "lucide-react";
 
 interface CreditRow { id: string; designation: string; montant: number; }
 interface PaymentRow { id: string; designation: string; montant: number; }
-interface Portefeuille { total: number; }
 
 interface Props {
     onValidate: (items: { designation: string; montant: number }[]) => void;
@@ -20,9 +19,6 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
 
     // Fonds Portefeuille state
     const [selectedPF, setSelectedPF] = useState<number | null>(null);
-    const [portefeuilles] = useState<Portefeuille[]>([
-        { total: 0 }, { total: 0 }, { total: 0 }, { total: 0 }
-    ]);
     const [pfTotals, setPfTotals] = useState([0, 0, 0, 0]);
     const [pfWithdraw, setPfWithdraw] = useState(0);
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
@@ -36,28 +32,19 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
     // Portefeuille totals
     const total2PF = pfWithdraws.reduce((s, w) => s + w, 0);
 
-    // Combined Total 2
-    const total2Combined = total2Payments + total2PF;
-    const totalGeneral = total2Combined - total1;
-
-    // Validate: combine Total PC + Total FP, send to parent
-    const handleValidate = () => {
+    // Auto-valider : envoie les données au parent à chaque changement
+    useEffect(() => {
         const items: { designation: string; montant: number }[] = [];
-
-        // Paiement Client — Total général entrée
         if (showPC && total2Payments > 0) {
             items.push({ designation: "Paiement client", montant: total2Payments });
         }
-
-        // Fonds Portefeuille — Total général entrée
         if (showFP && total2PF > 0) {
             pfWithdraws.forEach((w, i) => {
                 if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
             });
         }
-
         if (items.length > 0) onValidate(items);
-    };
+    }, [total2Payments, total2PF, showPC, showFP, pfWithdraws]);
 
     const updateCredit = (id: string, field: "designation" | "montant", val: string | number) => {
         setCredits(cs => cs.map(c => c.id === id ? { ...c, [field]: field === "montant" ? (parseFloat(String(val).replace(/\s/g, "").replace(",", ".")) || 0) : val } : c));
@@ -209,53 +196,6 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                 </div>
             )}
 
-            {/* RÉSUMÉ GLOBAL — Total général entrée */}
-            {(showPC || showFP) && (credits.length > 0 || payments.length > 0 || pfWithdraws.some(w => w > 0)) && (
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-1">
-                    {showPC && total1 > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-slate-600">Total 1 (Crédits clients)</span>
-                            <span className="font-black text-red-600">{fmt(total1)} FCFA</span>
-                        </div>
-                    )}
-                    {total2Payments > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-indigo-600">→ Paiement client</span>
-                            <span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span>
-                        </div>
-                    )}
-                    {total2PF > 0 && (
-                        <div className="flex justify-between text-xs">
-                            <span className="font-bold text-amber-600">→ Fonds portefeuille</span>
-                            <span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span>
-                        </div>
-                    )}
-                    {showPC && total1 > 0 && (() => {
-                        const creditRestant = total1 - total2Payments;
-                        return (
-                            <div className="flex justify-between text-sm border-t border-slate-300 pt-2">
-                                <span className="font-black text-slate-800">Total crédit restant</span>
-                                <span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>
-                                    {creditRestant > 0 ? fmt(creditRestant) : "0"} FCFA
-                                </span>
-                            </div>
-                        );
-                    })()}
-                    <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
-                        <span className="font-black text-slate-800">Total général entrée</span>
-                        <span className="font-black text-green-700 text-base">+{fmt(total2Combined)} FCFA</span>
-                    </div>
-                    {/* BOUTON VALIDER — transfère les données vers le formulaire parent */}
-                    {total2Combined > 0 && (
-                        <button
-                            onClick={handleValidate}
-                            className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform"
-                        >
-                            <Check size={14} /> Valider ces entrées ({fmt(total2Combined)} FCFA)
-                        </button>
-                    )}
-                </div>
-            )}
         </div>
     );
 }

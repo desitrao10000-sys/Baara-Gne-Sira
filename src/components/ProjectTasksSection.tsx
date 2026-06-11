@@ -452,7 +452,7 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                         {/* Helper Paiement Client / Fonds Portefeuille */}
                         <EntryPaymentHelper onValidate={(items) => {
                             const newItems = items.map(it => ({ id: crypto.randomUUID(), designation: it.designation, montant: it.montant }));
-                            setForm({ ...form, budgetEntreesPrev: [...form.budgetEntreesPrev, ...newItems] });
+                            setForm(prev => ({ ...prev, budgetEntreesPrev: newItems }));
                         }} />
                         {/* Lignes validées depuis le helper */}
                         {form.budgetEntreesPrev.length > 0 && (
