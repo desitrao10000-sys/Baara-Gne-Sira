@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, X, Check, Wallet, CreditCard } from "lucide-react";
 
 interface CreditRow { id: string; designation: string; montant: number; }
@@ -7,9 +7,10 @@ interface PaymentRow { id: string; designation: string; montant: number; }
 
 interface Props {
     onValidate: (items: { designation: string; montant: number }[]) => void;
+    initialItems?: { designation: string; montant: number }[];
 }
 
-export default function EntryPaymentHelper({ onValidate }: Props) {
+export default function EntryPaymentHelper({ onValidate, initialItems }: Props) {
     const [showPC, setShowPC] = useState(false);
     const [showFP, setShowFP] = useState(false);
 
@@ -23,6 +24,36 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
     const [pfWithdraw, setPfWithdraw] = useState(0);
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
 
+    // Flag pour ignorer le premier render (restauration données initiales)
+    const initialized = useRef(false);
+
+    // Restaurer les données initiales (quand on édite une tâche existante)
+    useEffect(() => {
+        if (initialized.current || !initialItems || initialItems.length === 0) return;
+        initialized.current = true;
+
+        let restoredPayments = 0;
+        const restoredWithdraws = [0, 0, 0, 0];
+
+        initialItems.forEach(item => {
+            if (item.designation === "Paiement client" && item.montant > 0) {
+                restoredPayments += item.montant;
+            } else if (item.designation.startsWith("Fonds Portefeuille ") && item.montant > 0) {
+                const idx = parseInt(item.designation.replace("Fonds Portefeuille ", "")) - 1;
+                if (idx >= 0 && idx < 4) restoredWithdraws[idx] = item.montant;
+            }
+        });
+
+        if (restoredPayments > 0) {
+            setPayments([{ id: crypto.randomUUID(), designation: "Paiement client restauré", montant: restoredPayments }]);
+            setShowPC(true);
+        }
+        if (restoredWithdraws.some(w => w > 0)) {
+            setPfWithdraws(restoredWithdraws);
+            setShowFP(true);
+        }
+    }, [initialItems]);
+
     const uid = () => crypto.randomUUID();
 
     // Paiement Client totals
@@ -32,19 +63,21 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
     // Portefeuille totals
     const total2PF = pfWithdraws.reduce((s, w) => s + w, 0);
 
-    // Auto-valider : envoie les données au parent à chaque changement
+    // Auto-valider : envoie TOUJOURS les données au parent, que la section soit ouverte ou non
     useEffect(() => {
         const items: { designation: string; montant: number }[] = [];
-        if (showPC && total2Payments > 0) {
+        // Toujours inclure les paiements, même si showPC est fermé
+        if (total2Payments > 0) {
             items.push({ designation: "Paiement client", montant: total2Payments });
         }
-        if (showFP && total2PF > 0) {
+        // Toujours inclure les retraits, même si showFP est fermé
+        if (total2PF > 0) {
             pfWithdraws.forEach((w, i) => {
                 if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w });
             });
         }
         if (items.length > 0) onValidate(items);
-    }, [total2Payments, total2PF, showPC, showFP, pfWithdraws]);
+    }, [total2Payments, total2PF, pfWithdraws]);
 
     const updateCredit = (id: string, field: "designation" | "montant", val: string | number) => {
         setCredits(cs => cs.map(c => c.id === id ? { ...c, [field]: field === "montant" ? (parseFloat(String(val).replace(/\s/g, "").replace(",", ".")) || 0) : val } : c));

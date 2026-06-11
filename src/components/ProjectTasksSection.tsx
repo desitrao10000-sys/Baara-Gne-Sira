@@ -450,10 +450,12 @@ export default function ProjectTasksSection({ tasks = [], projectMembers = [], o
                         <p className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1"><TrendingUp size={12} className="text-blue-600" /> Budget prévisionnel — Entrées</p>
                         <p className="text-[11px] font-semibold text-slate-500">Entrées prévues (paiements clients / fonds portefeuille)</p>
                         {/* Helper Paiement Client / Fonds Portefeuille */}
-                        <EntryPaymentHelper onValidate={(items) => {
-                            const newItems = items.map(it => ({ id: crypto.randomUUID(), designation: it.designation, montant: it.montant }));
-                            setForm(prev => ({ ...prev, budgetEntreesPrev: newItems }));
-                        }} />
+                        <EntryPaymentHelper
+                            initialItems={editingTask ? form.budgetEntreesPrev.map(it => ({ designation: it.designation, montant: it.montant })) : undefined}
+                            onValidate={(items) => {
+                                const newItems = items.map(it => ({ id: crypto.randomUUID(), designation: it.designation, montant: it.montant }));
+                                setForm(prev => ({ ...prev, budgetEntreesPrev: newItems }));
+                            }} />
                         {/* Lignes validées depuis le helper */}
                         {form.budgetEntreesPrev.length > 0 && (
                             <div className="space-y-2">
