@@ -1143,7 +1143,12 @@ export default function BusinessPlanWizard({ initialData, onComplete, onBack }: 
     const [helpLoading, setHelpLoading] = useState(false);
     const helpResponseRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [lineItems, setLineItems] = useState<Record<string, Array<{ desig: string; montant: string }>>>({});
+    const [lineItems, setLineItems] = useState<Record<string, Array<{ desig: string; montant: string }>>>(() => {
+        if (initialData?.lineItemsJson) {
+            try { return JSON.parse(initialData.lineItemsJson); } catch { return {}; }
+        }
+        return {};
+    });
 
     // Auto-scroll vers la réponse quand elle apparaît
     useEffect(() => {
