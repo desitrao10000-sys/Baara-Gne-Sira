@@ -245,6 +245,15 @@ export default function EntryPaymentHelper({ onValidate }: Props) {
                         <span className="font-black text-slate-800">Total général entrée</span>
                         <span className="font-black text-green-700 text-base">+{fmt(total2Combined)} FCFA</span>
                     </div>
+                    {/* BOUTON VALIDER — transfère les données vers le formulaire parent */}
+                    {total2Combined > 0 && (
+                        <button
+                            onClick={handleValidate}
+                            className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform"
+                        >
+                            <Check size={14} /> Valider ces entrées ({fmt(total2Combined)} FCFA)
+                        </button>
+                    )}
                 </div>
             )}
         </div>
