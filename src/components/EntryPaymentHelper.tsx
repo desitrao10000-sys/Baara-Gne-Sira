@@ -99,17 +99,85 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const inputCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 outline-none focus:border-blue-400";
     const amtCls = "w-full p-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 outline-none focus:border-blue-400";
 
-    const renderHistorySection = () => {
-        if (!showHistory) return null;
+    const renderHistoryBlock = (title: string, icon: string, entries: PaymentHistoryEntry[], bgHeader: string, textColor: string) => {
+        if (entries.length === 0) {
+            return (
+                <div className="rounded-xl p-3 border border-slate-200 bg-white">
+                    <p className={`text-[11px] font-black ${textColor} flex items-center gap-1 mb-2`}>{icon} {title}</p>
+                    <p className="text-[10px] text-slate-400 text-center py-2 font-semibold">Aucune transaction</p>
+                </div>
+            );
+        }
+        const totalIn = entries.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0);
+        const totalOut = entries.filter(h => h.montant < 0).reduce((s, h) => s + Math.abs(h.montant), 0);
         // Regrouper par jour
         const dayMap = new Map<string, PaymentHistoryEntry[]>();
-        [...history].reverse().forEach(entry => {
+        [...entries].reverse().forEach(entry => {
             const dayKey = fmtDay(entry.date);
             if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
             dayMap.get(dayKey)!.push(entry);
         });
-        const totalIn = history.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0);
-        const totalOut = history.filter(h => h.montant < 0).reduce((s, h) => s + Math.abs(h.montant), 0);
+        return (
+            <div className="rounded-xl p-3 border border-slate-200 bg-white space-y-2">
+                <div className="flex items-center justify-between">
+                    <p className={`text-[11px] font-black ${textColor} flex items-center gap-1`}>{icon} {title}</p>
+                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{entries.length}</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-0.5">
+                    {Array.from(dayMap.entries()).map(([dayLabel, dayEntries]) => (
+                        <div key={dayLabel} className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-px flex-1 bg-slate-200" />
+                                <span className="text-[9px] font-black text-slate-400 uppercase px-1.5">{dayLabel}</span>
+                                <div className="h-px flex-1 bg-slate-200" />
+                            </div>
+                            {dayEntries.map(entry => {
+                                const isPositive = entry.montant >= 0;
+                                const actionLabel = isPositive ? (entry.type === "credit" ? "Crédit ajouté" : entry.type === "retrait_pf" ? "Retrait effectué" : "Paiement reçu") : (entry.type === "credit" ? "Crédit supprimé" : entry.type === "retrait_pf" ? "Retrait annulé" : "Paiement supprimé");
+                                return (
+                                    <div key={entry.id} className={`rounded-lg p-2 border ${isPositive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} space-y-1`}>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] font-black text-slate-700">{actionLabel}</p>
+                                                {entry.designation && <p className="text-[10px] font-semibold text-slate-500">📌 {entry.designation}</p>}
+                                            </div>
+                                            <span className={`text-[11px] font-black shrink-0 ${isPositive ? "text-green-700" : "text-red-600"}`}>
+                                                {isPositive ? "+" : "-"}{fmt(Math.abs(entry.montant))} FCFA
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[9px] text-slate-400 font-semibold">
+                                            <span>🕐 {fmtTime(entry.date)}</span>
+                                            {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && (
+                                                <span className="text-slate-500">• Solde après: <b className="text-slate-700">{fmt(entry.soldeAfter)} FCFA</b></span>
+                                            )}
+                                        </div>
+                                        {entry.details && <p className="text-[9px] text-slate-500 bg-white/70 rounded px-1.5 py-0.5 font-medium">{entry.details}</p>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2">
+                    <div className="text-center bg-green-50 rounded-lg py-1">
+                        <p className="text-[9px] font-black text-green-700 uppercase">Total reçu</p>
+                        <p className="text-[11px] font-black text-green-700">+{fmt(totalIn)} FCFA</p>
+                    </div>
+                    <div className="text-center bg-red-50 rounded-lg py-1">
+                        <p className="text-[9px] font-black text-red-600 uppercase">Total retiré</p>
+                        <p className="text-[11px] font-black text-red-600">-{fmt(totalOut)} FCFA</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderHistorySection = () => {
+        if (!showHistory) return null;
+        const pcEntries = history.filter(h => h.type === "credit" || h.type === "paiement");
+        const fpEntries = history.filter(h => h.type === "retrait_pf");
+        const allTotalIn = history.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0);
+        const allTotalOut = history.filter(h => h.montant < 0).reduce((s, h) => s + Math.abs(h.montant), 0);
         return (
             <div className="bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl p-4 border-2 border-slate-300 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between">
@@ -123,60 +191,27 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                         <p className="text-[10px] text-slate-300">Les paiements et retraits apparaîtront ici</p>
                     </div>
                 ) : (
-                    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                        {Array.from(dayMap.entries()).map(([dayLabel, entries]) => (
-                            <div key={dayLabel} className="space-y-1.5">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-px flex-1 bg-slate-300" />
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2">{dayLabel}</span>
-                                    <div className="h-px flex-1 bg-slate-300" />
-                                </div>
-                                {entries.map(entry => {
-                                    const isCredit = entry.type === "credit";
-                                    const isPF = entry.type === "retrait_pf";
-                                    const icon = isCredit ? "📋" : isPF ? "📁" : "💰";
-                                    const bgCard = isCredit ? "bg-red-50 border-red-200" : isPF ? "bg-amber-50 border-amber-200" : "bg-indigo-50 border-indigo-200";
-                                    const titleColor = isCredit ? "text-red-700" : isPF ? "text-amber-700" : "text-indigo-700";
-                                    return (
-                                        <div key={entry.id} className={`rounded-xl p-2.5 border ${bgCard} space-y-1.5 shadow-sm`}>
-                                            <div className="flex justify-between items-start gap-2">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`text-[11px] font-black ${titleColor} flex items-center gap-1`}>
-                                                        <span>{icon}</span> <span className="truncate">{entry.label}</span>
-                                                    </p>
-                                                    {entry.designation && <p className="text-[10px] font-semibold text-slate-500 truncate">📌 {entry.designation}</p>}
-                                                </div>
-                                                <span className={`text-xs font-black shrink-0 ${entry.montant >= 0 ? "text-green-700" : "text-red-600"}`}>
-                                                    {entry.montant >= 0 ? "+" : ""}{fmt(entry.montant)} FCFA
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-semibold">
-                                                <span>🕐 {fmtTime(entry.date)}</span>
-                                                {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && (
-                                                    <span className="text-green-600">│ Solde: {fmt(entry.soldeAfter)} FCFA</span>
-                                                )}
-                                            </div>
-                                            {entry.details && <p className="text-[10px] text-slate-500 bg-white/60 rounded-lg px-2 py-1 font-medium">{entry.details}</p>}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
+                    <div className="space-y-3">
+                        {renderHistoryBlock("Historique — Fonds Portefeuille", "📁", fpEntries, "bg-amber-50", "text-amber-700")}
+                        {renderHistoryBlock("Historique — Paiement Client", "💰", pcEntries, "bg-indigo-50", "text-indigo-700")}
                     </div>
                 )}
                 {history.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 border-t-2 border-slate-200 pt-2">
-                        <div className="text-center">
-                            <p className="text-[10px] font-black text-green-700 uppercase">Entrées</p>
-                            <p className="text-xs font-black text-green-700">+{fmt(totalIn)}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-black text-red-600 uppercase">Sorties</p>
-                            <p className="text-xs font-black text-red-600">-{fmt(totalOut)}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-black text-slate-700 uppercase">Net</p>
-                            <p className={`text-xs font-black ${totalIn - totalOut >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(totalIn - totalOut)} FCFA</p>
+                    <div className="bg-white rounded-xl p-2 border-2 border-slate-200">
+                        <p className="text-[10px] font-black text-slate-700 uppercase text-center mb-1">Résumé général</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="text-center">
+                                <p className="text-[9px] font-black text-green-700 uppercase">Total entrées</p>
+                                <p className="text-[11px] font-black text-green-700">+{fmt(allTotalIn)}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[9px] font-black text-red-600 uppercase">Total sorties</p>
+                                <p className="text-[11px] font-black text-red-600">-{fmt(allTotalOut)}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[9px] font-black text-slate-700 uppercase">Solde net</p>
+                                <p className={`text-[11px] font-black ${allTotalIn - allTotalOut >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(allTotalIn - allTotalOut)} FCFA</p>
+                            </div>
                         </div>
                     </div>
                 )}
