@@ -24,6 +24,8 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const [pfWithdraw, setPfWithdraw] = useState(0);
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
     const initialized = useRef(false);
+    const oldValRef = useRef<Record<string, number>>({});
+    const focusVal = (id: string, val: number) => { oldValRef.current[id] = val; };
 
     const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string, designation?: string) => {
         if (!onHistoryChange) return;
@@ -76,18 +78,26 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
 
     const removePayment = (id: string) => {
         const p = payments.find(x => x.id === id);
-        if (p && p.montant > 0) addHistory("paiement", `Suppression: ${p.designation || "Paiement"}`, -p.montant);
+        if (p && p.montant > 0) addHistory("paiement", `Suppression paiement`, -p.montant, undefined, p.designation);
         setPayments(ps => ps.filter(x => x.id !== id));
     };
     const removeCredit = (id: string) => {
         const c = credits.find(x => x.id === id);
-        if (c && c.montant > 0) addHistory("credit", `Suppression crédit: ${c.designation || "Crédit"}`, -c.montant);
+        if (c && c.montant > 0) addHistory("credit", `Suppression crédit`, -c.montant, undefined, c.designation);
         setCredits(cs => cs.filter(x => x.id !== id));
     };
     const commitPaymentAmount = (id: string, oldVal: number) => {
         const p = payments.find(x => x.id === id);
         if (p && p.montant !== oldVal && p.montant > 0) {
-            addHistory("paiement", p.designation || "Paiement client", p.montant - oldVal, oldVal > 0 ? `${fmt(oldVal)} → ${fmt(p.montant)}` : `Nouveau: ${fmt(p.montant)}`);
+            const label = oldVal > 0 ? "Modification paiement client" : "Nouveau paiement client";
+            addHistory("paiement", label, p.montant - oldVal, oldVal > 0 ? `Ancien: ${fmt(oldVal)} FCFA → Nouveau: ${fmt(p.montant)} FCFA` : `Montant: ${fmt(p.montant)} FCFA`, p.designation);
+        }
+    };
+    const commitCreditAmount = (id: string, oldVal: number) => {
+        const c = credits.find(x => x.id === id);
+        if (c && c.montant !== oldVal && c.montant > 0) {
+            const label = oldVal > 0 ? "Modification crédit client" : "Nouveau crédit client";
+            addHistory("credit", label, c.montant - oldVal, oldVal > 0 ? `Ancien: ${fmt(oldVal)} FCFA → Nouveau: ${fmt(c.montant)} FCFA` : `Montant: ${fmt(c.montant)} FCFA`, c.designation);
         }
     };
 
@@ -241,7 +251,7 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                             {credits.map(c => (
                                 <div key={c.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
                                     <input type="text" value={c.designation} onChange={e => updateCredit(c.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
-                                    <input type="text" inputMode="numeric" value={c.montant || ""} onChange={e => updateCredit(c.id, "montant", e.target.value)} placeholder="Crédit" className={amtCls} />
+                                    <input type="text" inputMode="numeric" value={c.montant || ""} onChange={e => updateCredit(c.id, "montant", e.target.value)} onFocus={() => focusVal(c.id, c.montant)} onBlur={() => commitCreditAmount(c.id, oldValRef.current[c.id] ?? 0)} placeholder="Crédit" className={amtCls} />
                                     <button onClick={() => removeCredit(c.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
                                 </div>
                             ))}
@@ -252,14 +262,13 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                     <div>
                         <p className="text-[11px] font-black text-indigo-700 mb-2">💰 Paiement du jour</p>
                         <div className="space-y-1.5">
-                            {payments.map(p => {
-                                const oldVal = p.montant; return (
-                                    <div key={p.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
-                                        <input type="text" value={p.designation} onChange={e => updatePayment(p.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
-                                        <input type="text" inputMode="numeric" value={p.montant || ""} onChange={e => updatePayment(p.id, "montant", e.target.value)} onBlur={() => commitPaymentAmount(p.id, oldVal)} placeholder="Montant" className={amtCls} />
-                                        <button onClick={() => removePayment(p.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
-                                    </div>);
-                            })}
+                            {payments.map(p => (
+                                <div key={p.id} className="grid grid-cols-[1fr_100px_28px] gap-1.5 items-center">
+                                    <input type="text" value={p.designation} onChange={e => updatePayment(p.id, "designation", e.target.value)} placeholder="Désignation..." className={inputCls} />
+                                    <input type="text" inputMode="numeric" value={p.montant || ""} onChange={e => updatePayment(p.id, "montant", e.target.value)} onFocus={() => focusVal(p.id, p.montant)} onBlur={() => commitPaymentAmount(p.id, oldValRef.current[p.id] ?? 0)} placeholder="Montant" className={amtCls} />
+                                    <button onClick={() => removePayment(p.id)} className="p-1 rounded-lg bg-red-50" aria-label="Supprimer"><X size={12} className="text-red-400" /></button>
+                                </div>
+                            ))}
                             <button onClick={() => setPayments([...payments, { id: uid(), designation: "", montant: 0 }])} className="w-full py-1.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-400 text-[11px] font-bold flex items-center justify-center gap-1"><Plus size={12} /> Ajouter paiement</button>
                         </div>
                         {payments.length > 0 && (<div className="flex justify-between text-xs border-t border-indigo-200 pt-2 mt-2"><span className="font-black text-indigo-700">Total 2 (Paiements)</span><span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span></div>)}
