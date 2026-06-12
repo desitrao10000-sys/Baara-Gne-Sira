@@ -143,22 +143,36 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                             </div>
                             {dayEntries.map(entry => {
                                 const isPositive = entry.montant >= 0;
-                                const actionLabel = isPositive ? (entry.type === "credit" ? "Crédit ajouté" : entry.type === "retrait_pf" ? "Retrait effectué" : "Paiement reçu") : (entry.type === "credit" ? "Crédit supprimé" : entry.type === "retrait_pf" ? "Retrait annulé" : "Paiement supprimé");
+                                const isCredit = entry.type === "credit";
+                                let actionLabel = "";
+                                if (isCredit) {
+                                    actionLabel = isPositive
+                                        ? "Crédit client enregistré (somme due par le client, pas encore reçue)"
+                                        : "Crédit client supprimé ou réduit (annulation de la dette)";
+                                } else if (entry.type === "retrait_pf") {
+                                    actionLabel = isPositive
+                                        ? "Retrait de fonds depuis le portefeuille vers les entrées du budget prévisionnel"
+                                        : "Retrait de fonds portefeuille annulé ou remboursé";
+                                } else {
+                                    actionLabel = isPositive
+                                        ? "Paiement client reçu (argent effectivement reçu du client pour un produit/service)"
+                                        : "Paiement client supprimé ou remboursé (sortie d'argent)";
+                                }
                                 return (
-                                    <div key={entry.id} className={`rounded-lg p-2 border ${isPositive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} space-y-1`}>
-                                        <div className="flex justify-between items-center gap-2">
+                                    <div key={entry.id} className={`rounded-lg p-2.5 border ${isCredit ? (isPositive ? "bg-orange-50 border-orange-200" : "bg-orange-50 border-orange-200") : (isPositive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")} space-y-1.5`}>
+                                        <div className="flex justify-between items-start gap-2">
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black text-slate-700">{actionLabel}</p>
-                                                {entry.designation && <p className="text-[10px] font-semibold text-slate-500">📌 {entry.designation}</p>}
+                                                <p className={`text-[10px] font-black ${isCredit ? "text-orange-700" : "text-slate-700"}`}>{actionLabel}</p>
+                                                {entry.designation && <p className="text-[10px] font-semibold text-slate-500 mt-0.5">📌 Désignation: {entry.designation}</p>}
                                             </div>
-                                            <span className={`text-[11px] font-black shrink-0 ${isPositive ? "text-green-700" : "text-red-600"}`}>
-                                                {isPositive ? "+" : "-"}{fmt(Math.abs(entry.montant))} FCFA
+                                            <span className={`text-[11px] font-black shrink-0 ${isCredit ? "text-orange-700" : (isPositive ? "text-green-700" : "text-red-600")}`}>
+                                                {isCredit ? "💳" : (isPositive ? "+" : "-")}{fmt(Math.abs(entry.montant))} FCFA
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-[9px] text-slate-400 font-semibold">
                                             <span>🕐 {fmtTime(entry.date)}</span>
-                                            {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && (
-                                                <span className="text-slate-500">• Solde après: <b className="text-slate-700">{fmt(entry.soldeAfter)} FCFA</b></span>
+                                            {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && !isCredit && (
+                                                <span className="text-slate-500">• Total entrées budget après opération: <b className="text-slate-700">{fmt(entry.soldeAfter)} FCFA</b></span>
                                             )}
                                         </div>
                                         {entry.details && <p className="text-[9px] text-slate-500 bg-white/70 rounded px-1.5 py-0.5 font-medium">{entry.details}</p>}
@@ -169,14 +183,29 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                     ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2">
-                    <div className="text-center bg-green-50 rounded-lg py-1">
-                        <p className="text-[9px] font-black text-green-700 uppercase">Total reçu</p>
-                        <p className="text-[11px] font-black text-green-700">+{fmt(totalIn)} FCFA</p>
-                    </div>
-                    <div className="text-center bg-red-50 rounded-lg py-1">
-                        <p className="text-[9px] font-black text-red-600 uppercase">Total retiré</p>
-                        <p className="text-[11px] font-black text-red-600">-{fmt(totalOut)} FCFA</p>
-                    </div>
+                    {entries.some(e => e.type === "credit") ? (
+                        <>
+                            <div className="text-center bg-orange-50 rounded-lg py-1">
+                                <p className="text-[9px] font-black text-orange-700 uppercase">Crédits (dettes)</p>
+                                <p className="text-[11px] font-black text-orange-700">💳 {fmt(totalIn)} FCFA</p>
+                            </div>
+                            <div className="text-center bg-orange-50 rounded-lg py-1">
+                                <p className="text-[9px] font-black text-orange-600 uppercase">Crédits annulés</p>
+                                <p className="text-[11px] font-black text-orange-600">-{fmt(totalOut)} FCFA</p>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-center bg-green-50 rounded-lg py-1">
+                                <p className="text-[9px] font-black text-green-700 uppercase">Total reçu (entrées budget)</p>
+                                <p className="text-[11px] font-black text-green-700">+{fmt(totalIn)} FCFA</p>
+                            </div>
+                            <div className="text-center bg-red-50 rounded-lg py-1">
+                                <p className="text-[9px] font-black text-red-600 uppercase">Total retiré / supprimé</p>
+                                <p className="text-[11px] font-black text-red-600">-{fmt(totalOut)} FCFA</p>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         );
