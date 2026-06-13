@@ -71,7 +71,7 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const confirmPFWithdraw = () => {
         if (selectedPF === null || pfWithdraw <= 0) return;
         if (pfWithdraw > pfTotals[selectedPF] - pfWithdraws[selectedPF]) return;
-        addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, `Solde avant: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} FCFA → Solde après: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF] - pfWithdraw)} FCFA`, `Portefeuille ${selectedPF + 1}`);
+        addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, undefined, `Portefeuille ${selectedPF + 1}`);
         setPfWithdraws(ws => ws.map((w, i) => i === selectedPF ? w + pfWithdraw : w));
         setPfWithdraw(0);
     };
@@ -184,11 +184,11 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                         <>
                             <div className="text-center bg-orange-50 rounded-lg py-1">
                                 <p className="text-[9px] font-black text-orange-700 uppercase">Crédits total client enregistrés</p>
-                                <p className="text-[11px] font-black text-orange-700">💳 {fmt(totalIn)} FCFA</p>
+                                <p className="text-[11px] font-black text-orange-700">💳 {fmt(entries.filter(e => e.type === "credit" && e.montant > 0).reduce((s, e) => s + e.montant, 0))} FCFA</p>
                             </div>
                             <div className="text-center bg-green-50 rounded-lg py-1">
                                 <p className="text-[9px] font-black text-green-700 uppercase">Paiement total client reçues</p>
-                                <p className="text-[11px] font-black text-green-700">+{fmt(totalOut)} FCFA</p>
+                                <p className="text-[11px] font-black text-green-700">+{fmt(entries.filter(e => e.type === "paiement" && e.montant > 0).reduce((s, e) => s + e.montant, 0))} FCFA</p>
                             </div>
                         </>
                     ) : (
@@ -227,23 +227,26 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                     </div>
                 )}
                 {history.length > 0 && (() => {
-                    const creditTotal = history.filter(h => h.type === "credit" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
-                    const creditRegles = history.filter(h => h.type === "paiement" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+                    const creditTotalEnregistres = history.filter(h => h.type === "credit" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+                    const paiementTotalRecus = history.filter(h => h.type === "paiement" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+                    const creditRestant = Math.max(0, total1 - total2Payments);
+                    const creditsRegles = creditRestant === 0 ? creditTotalEnregistres : Math.max(0, creditTotalEnregistres - creditRestant);
+                    const totalGeneralEntree = total2Payments + total2PF;
                     return (
                         <div className="bg-white rounded-xl p-3 border-2 border-slate-200">
                             <p className="text-[10px] font-black text-slate-700 uppercase text-center mb-2">Résumé général</p>
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="text-center bg-green-50 rounded-lg py-1.5">
                                     <p className="text-[9px] font-black text-green-700 uppercase">Total général entrées</p>
-                                    <p className="text-[11px] font-black text-green-700">+{fmt(allTotalIn)} FCFA</p>
+                                    <p className="text-[11px] font-black text-green-700">+{fmt(totalGeneralEntree)} FCFA</p>
                                 </div>
                                 <div className="text-center bg-orange-50 rounded-lg py-1.5">
                                     <p className="text-[9px] font-black text-orange-700 uppercase">Crédit total client enregistrés</p>
-                                    <p className="text-[11px] font-black text-orange-700">💳 {fmt(creditTotal)} FCFA</p>
+                                    <p className="text-[11px] font-black text-orange-700">💳 {fmt(creditTotalEnregistres)} FCFA</p>
                                 </div>
                                 <div className="text-center bg-blue-50 rounded-lg py-1.5">
                                     <p className="text-[9px] font-black text-blue-700 uppercase">Crédits clients réglés</p>
-                                    <p className="text-[11px] font-black text-blue-700">✅ {fmt(creditRegles)} FCFA</p>
+                                    <p className="text-[11px] font-black text-blue-700">✅ {fmt(creditsRegles)} FCFA</p>
                                 </div>
                             </div>
                         </div>
