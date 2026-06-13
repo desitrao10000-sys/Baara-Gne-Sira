@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Check, Wallet, CreditCard, History } from "lucide-react";
+import { Plus, X, Check, Wallet, CreditCard, History, RotateCcw } from "lucide-react";
 import { PaymentHistoryEntry } from "@/lib/useSupabaseProjects";
 
 interface CreditRow { id: string; designation: string; montant: number; }
@@ -26,6 +26,14 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const initialized = useRef(false);
     const oldValRef = useRef<Record<string, number>>({});
     const focusVal = (id: string, val: number) => { oldValRef.current[id] = val; };
+
+    const newSession = () => {
+        setCredits([]);
+        setPayments([]);
+        setPfWithdraws([0, 0, 0, 0]);
+        setPfWithdraw(0);
+        setSelectedPF(null);
+    };
 
     const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string, designation?: string) => {
         if (!onHistoryChange) return;
@@ -119,13 +127,22 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
             );
         }
         const totalIn = entries.filter(h => h.montant > 0).reduce((s, h) => s + h.montant, 0);
-        const totalOut = entries.filter(h => h.montant < 0).reduce((s, h) => s + Math.abs(h.montant), 0);
-        // Regrouper par jour
+        // Trier du plus ancien au plus récent, puis regrouper paiements et crédits
+        const sortedEntries = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const dayMap = new Map<string, PaymentHistoryEntry[]>();
-        [...entries].reverse().forEach(entry => {
+        sortedEntries.forEach(entry => {
             const dayKey = fmtDay(entry.date);
             if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
             dayMap.get(dayKey)!.push(entry);
+        });
+        // Dans chaque jour, regrouper par type: paiements ensemble, crédits ensemble
+        dayMap.forEach(dayEntries => {
+            dayEntries.sort((a, b) => {
+                const typeOrder: Record<string, number> = { paiement: 0, credit: 1, retrait_pf: 2 };
+                const diff = (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3);
+                if (diff !== 0) return diff;
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
+            });
         });
         return (
             <div className="rounded-xl p-3 border border-slate-200 bg-white space-y-2">
@@ -310,6 +327,9 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                     {total2PF > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-amber-600">→ Fonds portefeuille</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>)}
                     {showPC && total1 > 0 && (() => { const r = total1 - total2Payments; return (<div className="flex justify-between text-sm border-t border-slate-300 pt-2"><span className="font-black text-slate-800">Total crédit restant</span><span className={`font-black ${r > 0 ? "text-red-600" : "text-green-700"}`}>{r > 0 ? fmt(r) : "0"} FCFA</span></div>); })()}
                     {(() => { const t = total2Payments + total2PF; return t > 0 ? (<div className="flex justify-between text-sm border-t border-slate-200 pt-2"><span className="font-black text-slate-800">Total général entrée</span><span className="font-black text-green-700 text-base">+{fmt(t)} FCFA</span></div>) : null; })()}
+                    <button onClick={newSession} className="w-full mt-2 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 bg-indigo-100 text-indigo-700 border-2 border-dashed border-indigo-300 hover:bg-indigo-200 transition-all">
+                        <RotateCcw size={12} /> Nouvelle saisie (vider les champs)
+                    </button>
                 </div>
             )}
 
