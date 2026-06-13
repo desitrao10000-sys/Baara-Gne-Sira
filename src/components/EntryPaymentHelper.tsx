@@ -71,7 +71,7 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const confirmPFWithdraw = () => {
         if (selectedPF === null || pfWithdraw <= 0) return;
         if (pfWithdraw > pfTotals[selectedPF] - pfWithdraws[selectedPF]) return;
-        addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, `Solde: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} → ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF] - pfWithdraw)}`);
+        addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, `Solde avant: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} FCFA → Solde après: ${fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF] - pfWithdraw)} FCFA`, `Portefeuille ${selectedPF + 1}`);
         setPfWithdraws(ws => ws.map((w, i) => i === selectedPF ? w + pfWithdraw : w));
         setPfWithdraw(0);
     };
@@ -151,8 +151,8 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                                         : "Crédit client supprimé ou réduit (annulation de la dette)";
                                 } else if (entry.type === "retrait_pf") {
                                     actionLabel = isPositive
-                                        ? "Retrait de fonds depuis le portefeuille vers les entrées du budget prévisionnel"
-                                        : "Retrait de fonds portefeuille annulé ou remboursé";
+                                        ? `${fmt(entry.montant)} FCFA retiré du ${entry.designation || "Portefeuille"}`
+                                        : `Retrait annulé sur le ${entry.designation || "Portefeuille"}`;
                                 } else {
                                     actionLabel = isPositive
                                         ? "Paiement client reçu (argent effectivement reçu du client pour un produit/service)"
@@ -163,7 +163,7 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                                         <div className="flex justify-between items-start gap-2">
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-[10px] font-black ${isCredit ? "text-orange-700" : "text-slate-700"}`}>{actionLabel}</p>
-                                                {entry.designation && <p className="text-[10px] font-semibold text-slate-500 mt-0.5">📌 Désignation: {entry.designation}</p>}
+                                                {!isCredit && entry.type !== "retrait_pf" && entry.designation && <p className="text-[10px] font-semibold text-slate-500 mt-0.5">📌 Désignation: {entry.designation}</p>}
                                             </div>
                                             <span className={`text-[11px] font-black shrink-0 ${isCredit ? "text-orange-700" : (isPositive ? "text-green-700" : "text-red-600")}`}>
                                                 {isCredit ? "💳" : (isPositive ? "+" : "-")}{fmt(Math.abs(entry.montant))} FCFA
@@ -171,9 +171,6 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                                         </div>
                                         <div className="flex items-center gap-2 text-[9px] text-slate-400 font-semibold">
                                             <span>🕐 {fmtTime(entry.date)}</span>
-                                            {entry.soldeAfter !== undefined && entry.soldeAfter >= 0 && !isCredit && (
-                                                <span className="text-slate-500">• Total entrées budget après opération: <b className="text-slate-700">{fmt(entry.soldeAfter)} FCFA</b></span>
-                                            )}
                                         </div>
                                         {entry.details && <p className="text-[9px] text-slate-500 bg-white/70 rounded px-1.5 py-0.5 font-medium">{entry.details}</p>}
                                     </div>
@@ -186,25 +183,19 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                     {entries.some(e => e.type === "credit") ? (
                         <>
                             <div className="text-center bg-orange-50 rounded-lg py-1">
-                                <p className="text-[9px] font-black text-orange-700 uppercase">Crédits (dettes)</p>
+                                <p className="text-[9px] font-black text-orange-700 uppercase">Crédits total client enregistrés</p>
                                 <p className="text-[11px] font-black text-orange-700">💳 {fmt(totalIn)} FCFA</p>
                             </div>
-                            <div className="text-center bg-orange-50 rounded-lg py-1">
-                                <p className="text-[9px] font-black text-orange-600 uppercase">Crédits annulés</p>
-                                <p className="text-[11px] font-black text-orange-600">-{fmt(totalOut)} FCFA</p>
+                            <div className="text-center bg-green-50 rounded-lg py-1">
+                                <p className="text-[9px] font-black text-green-700 uppercase">Paiement total client reçues</p>
+                                <p className="text-[11px] font-black text-green-700">+{fmt(totalOut)} FCFA</p>
                             </div>
                         </>
                     ) : (
-                        <>
-                            <div className="text-center bg-green-50 rounded-lg py-1">
-                                <p className="text-[9px] font-black text-green-700 uppercase">Total reçu (entrées budget)</p>
-                                <p className="text-[11px] font-black text-green-700">+{fmt(totalIn)} FCFA</p>
-                            </div>
-                            <div className="text-center bg-red-50 rounded-lg py-1">
-                                <p className="text-[9px] font-black text-red-600 uppercase">Total retiré / supprimé</p>
-                                <p className="text-[11px] font-black text-red-600">-{fmt(totalOut)} FCFA</p>
-                            </div>
-                        </>
+                        <div className="text-center bg-green-50 rounded-lg py-1 col-span-2">
+                            <p className="text-[9px] font-black text-green-700 uppercase">Total reçu (entrées budget prévisionnel)</p>
+                            <p className="text-[11px] font-black text-green-700">+{fmt(totalIn)} FCFA</p>
+                        </div>
                     )}
                 </div>
             </div>
@@ -235,25 +226,29 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                         {renderHistoryBlock("Historique — Paiement Client", "💰", pcEntries, "bg-indigo-50", "text-indigo-700")}
                     </div>
                 )}
-                {history.length > 0 && (
-                    <div className="bg-white rounded-xl p-2 border-2 border-slate-200">
-                        <p className="text-[10px] font-black text-slate-700 uppercase text-center mb-1">Résumé général</p>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="text-center">
-                                <p className="text-[9px] font-black text-green-700 uppercase">Total entrées</p>
-                                <p className="text-[11px] font-black text-green-700">+{fmt(allTotalIn)}</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[9px] font-black text-red-600 uppercase">Total sorties</p>
-                                <p className="text-[11px] font-black text-red-600">-{fmt(allTotalOut)}</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[9px] font-black text-slate-700 uppercase">Solde net</p>
-                                <p className={`text-[11px] font-black ${allTotalIn - allTotalOut >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(allTotalIn - allTotalOut)} FCFA</p>
+                {history.length > 0 && (() => {
+                    const creditTotal = history.filter(h => h.type === "credit" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+                    const creditRegles = history.filter(h => h.type === "paiement" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+                    return (
+                        <div className="bg-white rounded-xl p-3 border-2 border-slate-200">
+                            <p className="text-[10px] font-black text-slate-700 uppercase text-center mb-2">Résumé général</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center bg-green-50 rounded-lg py-1.5">
+                                    <p className="text-[9px] font-black text-green-700 uppercase">Total général entrées</p>
+                                    <p className="text-[11px] font-black text-green-700">+{fmt(allTotalIn)} FCFA</p>
+                                </div>
+                                <div className="text-center bg-orange-50 rounded-lg py-1.5">
+                                    <p className="text-[9px] font-black text-orange-700 uppercase">Crédit total client enregistrés</p>
+                                    <p className="text-[11px] font-black text-orange-700">💳 {fmt(creditTotal)} FCFA</p>
+                                </div>
+                                <div className="text-center bg-blue-50 rounded-lg py-1.5">
+                                    <p className="text-[9px] font-black text-blue-700 uppercase">Crédits clients réglés</p>
+                                    <p className="text-[11px] font-black text-blue-700">✅ {fmt(creditRegles)} FCFA</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         );
     };
