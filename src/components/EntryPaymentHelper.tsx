@@ -27,13 +27,10 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const oldValRef = useRef<Record<string, number>>({});
     const focusVal = (id: string, val: number) => { oldValRef.current[id] = val; };
 
-    const newSession = () => {
-        setCredits([]);
-        setPayments([]);
-        setPfWithdraws([0, 0, 0, 0]);
-        setPfWithdraw(0);
-        setSelectedPF(null);
-    };
+    // Accumulateurs pour conserver les totaux entre sessions
+    const [accCredits, setAccCredits] = useState(0);
+    const [accPayments, setAccPayments] = useState(0);
+    const [accPF, setAccPF] = useState([0, 0, 0, 0]);
 
     const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string, designation?: string) => {
         if (!onHistoryChange) return;
@@ -58,16 +55,36 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     }, [initialItems]);
 
     const uid = () => crypto.randomUUID();
-    const total1 = credits.reduce((s, c) => s + (c.montant || 0), 0);
-    const total2Payments = payments.reduce((s, p) => s + (p.montant || 0), 0);
-    const total2PF = pfWithdraws.reduce((s, w) => s + w, 0);
+
+    // Totaux de la session courante (champs en cours)
+    const sessionTotal1 = credits.reduce((s, c) => s + (c.montant || 0), 0);
+    const sessionTotal2Payments = payments.reduce((s, p) => s + (p.montant || 0), 0);
+    const sessionTotal2PF = pfWithdraws.reduce((s, w) => s + w, 0);
+
+    // Totaux cumulatifs = accumulateurs (sessions précédentes) + session courante
+    const total1 = accCredits + sessionTotal1;
+    const total2Payments = accPayments + sessionTotal2Payments;
+    const total2PF = accPF.reduce((s, w) => s + w, 0) + sessionTotal2PF;
+    const cumPFRetraits = accPF.map((a, i) => a + pfWithdraws[i]);
+
+    // Nouvelle saisie : accumuler avant de vider
+    const newSession = () => {
+        setAccCredits(prev => prev + sessionTotal1);
+        setAccPayments(prev => prev + sessionTotal2Payments);
+        setAccPF(prev => prev.map((w, i) => w + pfWithdraws[i]));
+        setCredits([]);
+        setPayments([]);
+        setPfWithdraws([0, 0, 0, 0]);
+        setPfWithdraw(0);
+        setSelectedPF(null);
+    };
 
     useEffect(() => {
         const items: { designation: string; montant: number }[] = [];
         if (total2Payments > 0) items.push({ designation: "Paiement client", montant: total2Payments });
-        if (total2PF > 0) pfWithdraws.forEach((w, i) => { if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w }); });
-        if (items.length > 0) onValidate(items);
-    }, [total2Payments, total2PF, pfWithdraws]);
+        cumPFRetraits.forEach((w, i) => { if (w > 0) items.push({ designation: `Fonds Portefeuille ${i + 1}`, montant: w }); });
+        onValidate(items);
+    }, [total2Payments, cumPFRetraits]);
 
     const updateCredit = (id: string, field: "designation" | "montant", val: string | number) => {
         setCredits(cs => cs.map(c => c.id === id ? { ...c, [field]: field === "montant" ? (parseFloat(String(val).replace(/\s/g, "").replace(",", ".")) || 0) : val } : c));
