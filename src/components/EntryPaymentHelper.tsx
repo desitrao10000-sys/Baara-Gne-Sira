@@ -50,8 +50,10 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                 if (idx >= 0 && idx < 4) restoredWithdraws[idx] = item.montant;
             }
         });
-        if (restoredPayments > 0) { setPayments([{ id: crypto.randomUUID(), designation: "Paiement client restauré", montant: restoredPayments }]); setShowPC(true); }
-        if (restoredWithdraws.some(w => w > 0)) { setPfWithdraws(restoredWithdraws); setShowFP(true); }
+        // Restaurer dans les accumulateurs, PAS dans les champs session
+        // → les champs restent vides pour une nouvelle saisie propre
+        if (restoredPayments > 0) setAccPayments(restoredPayments);
+        if (restoredWithdraws.some(w => w > 0)) setAccPF(restoredWithdraws);
     }, [initialItems]);
 
     const uid = () => crypto.randomUUID();
@@ -95,7 +97,7 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
 
     const confirmPFWithdraw = () => {
         if (selectedPF === null || pfWithdraw <= 0) return;
-        if (pfWithdraw > pfTotals[selectedPF] - pfWithdraws[selectedPF]) return;
+        if (pfWithdraw > pfTotals[selectedPF] - cumPFRetraits[selectedPF]) return;
         addHistory("retrait_pf", `Retrait Portefeuille ${selectedPF + 1}`, pfWithdraw, undefined, `Portefeuille ${selectedPF + 1}`);
         setPfWithdraws(ws => ws.map((w, i) => i === selectedPF ? w + pfWithdraw : w));
         setPfWithdraw(0);
@@ -373,17 +375,17 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                         <div className="bg-white rounded-xl p-3 border border-amber-200 space-y-2">
                             <div className="flex justify-between text-xs"><span className="font-bold text-amber-700">Portefeuille {selectedPF + 1} — Montant total</span><span className="font-black text-amber-800">{fmt(pfTotals[selectedPF])} FCFA</span></div>
                             <input type="text" inputMode="numeric" value={pfTotals[selectedPF] || ""} onChange={e => { const v = parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0; setPfTotals(ts => ts.map((t, idx) => idx === selectedPF ? v : t)); }} placeholder="Définir le montant total du portefeuille" className={amtCls} />
-                            <div className="flex justify-between text-xs text-slate-500"><span>Déjà retiré</span><span className="font-bold">{fmt(pfWithdraws[selectedPF])} FCFA</span></div>
+                            <div className="flex justify-between text-xs text-slate-500"><span>Déjà retiré (cumul)</span><span className="font-bold">{fmt(cumPFRetraits[selectedPF])} FCFA</span></div>
                             <div className="flex gap-1.5 items-end">
                                 <div className="flex-1"><label className="text-[10px] font-bold text-amber-600 block mb-0.5">Montant à retirer</label><input type="text" inputMode="numeric" value={pfWithdraw || ""} onChange={e => setPfWithdraw(parseFloat(e.target.value.replace(/\s/g, "").replace(",", ".")) || 0)} placeholder="0" className={amtCls} /></div>
                                 <button onClick={confirmPFWithdraw} disabled={pfWithdraw <= 0} title="Confirmer le retrait" className={`px-3 py-2 rounded-xl text-xs font-bold ${pfWithdraw > 0 ? "bg-amber-500 text-white active:scale-95" : "bg-slate-100 text-slate-400"}`}><Check size={14} /></button>
                             </div>
-                            <div className="flex justify-between text-xs border-t border-amber-200 pt-2"><span className="font-black text-amber-700">Nouveau solde</span><span className={`font-black ${pfTotals[selectedPF] - pfWithdraws[selectedPF] >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(pfTotals[selectedPF] - pfWithdraws[selectedPF])} FCFA</span></div>
+                            <div className="flex justify-between text-xs border-t border-amber-200 pt-2"><span className="font-black text-amber-700">Nouveau solde</span><span className={`font-black ${pfTotals[selectedPF] - cumPFRetraits[selectedPF] >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(pfTotals[selectedPF] - cumPFRetraits[selectedPF])} FCFA</span></div>
                         </div>
                     )}
-                    {pfWithdraws.some(w => w > 0) && (
+                    {cumPFRetraits.some(w => w > 0) && (
                         <div className="space-y-1">
-                            {pfWithdraws.map((w, i) => w > 0 ? (<div key={i} className="flex justify-between text-xs bg-white rounded-lg p-2 border border-amber-200"><span className="font-bold text-amber-700">Portefeuille {i + 1}</span><span className="font-black text-green-700">+{fmt(w)} FCFA</span></div>) : null)}
+                            {cumPFRetraits.map((w, i) => w > 0 ? (<div key={i} className="flex justify-between text-xs bg-white rounded-lg p-2 border border-amber-200"><span className="font-bold text-amber-700">Portefeuille {i + 1} (cumul)</span><span className="font-black text-green-700">+{fmt(w)} FCFA</span></div>) : null)}
                             <div className="flex justify-between text-xs border-t border-amber-300 pt-1"><span className="font-black text-amber-800">Paiement du jour</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>
                         </div>
                     )}
