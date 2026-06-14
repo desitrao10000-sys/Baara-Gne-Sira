@@ -36,15 +36,20 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
 
     // SOURCE UNIQUE DE VÉRITÉ : accumulateurs calculés DIRECTEMENT depuis l'historique
     // À chaque render, on recalcule → les totaux évoluent à chaque nouvelle entrée
-    let accCredits = history.filter(h => h.type === "credit" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
-    let accPayments = history.filter(h => h.type === "paiement" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+    // Sommer TOUS les deltas (positifs ET négatifs) pour avoir le vrai total
+    let accCredits = history.filter(h => h.type === "credit").reduce((s, h) => s + h.montant, 0);
+    let accPayments = history.filter(h => h.type === "paiement").reduce((s, h) => s + h.montant, 0);
     let accPF = [0, 0, 0, 0];
     history.forEach(h => {
-        if (h.type === "retrait_pf" && h.montant > 0 && h.designation) {
+        if (h.type === "retrait_pf" && h.designation) {
             const m = h.designation.match(/Portefeuille (\d+)/);
             if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < 4) accPF[idx] += h.montant; }
         }
     });
+    // Les totaux ne peuvent pas être négatifs
+    accCredits = Math.max(0, accCredits);
+    accPayments = Math.max(0, accPayments);
+    accPF = accPF.map(v => Math.max(0, v));
     // Compléter avec initialItems si présent (fallback quand pas d'historique)
     if (initialItems && initialItems.length > 0) {
         initialItems.forEach(item => {
@@ -56,16 +61,12 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
         });
     }
 
-    // Totaux de la session courante (champs en cours de saisie)
-    const sessionTotal1 = credits.reduce((s, c) => s + (c.montant || 0), 0);
-    const sessionTotal2Payments = payments.reduce((s, p) => s + (p.montant || 0), 0);
-    const sessionTotal2PF = pfWithdraws.reduce((s, w) => s + w, 0);
-
-    // Totaux cumulatifs = accumulateurs (depuis historique) + session courante
-    const total1 = accCredits + sessionTotal1;
-    const total2Payments = accPayments + sessionTotal2Payments;
-    const total2PF = accPF.reduce((s, w) => s + w, 0) + sessionTotal2PF;
-    const cumPFRetraits = accPF.map((a, i) => a + pfWithdraws[i]);
+    // TOTAUX = UNIQUEMENT depuis l'historique (source unique de vérité)
+    // Les champs session ne servent qu'à la saisie, les valeurs validées vont dans l'historique au blur/confirm
+    const total1 = accCredits;
+    const total2Payments = accPayments;
+    const total2PF = accPF.reduce((s, w) => s + w, 0);
+    const cumPFRetraits = [...accPF];
 
     // Nouvelle saisie : juste vider les champs. Les accumulateurs sont calculés depuis l'historique,
     // donc ils conservent automatiquement toutes les valeurs enregistrées.
