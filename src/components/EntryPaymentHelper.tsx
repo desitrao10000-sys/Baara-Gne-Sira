@@ -23,14 +23,8 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
     const [pfTotals, setPfTotals] = useState([0, 0, 0, 0]);
     const [pfWithdraw, setPfWithdraw] = useState(0);
     const [pfWithdraws, setPfWithdraws] = useState([0, 0, 0, 0]);
-    const initialized = useRef(false);
     const oldValRef = useRef<Record<string, number>>({});
     const focusVal = (id: string, val: number) => { oldValRef.current[id] = val; };
-
-    // Accumulateurs pour conserver les totaux entre sessions
-    const [accCredits, setAccCredits] = useState(0);
-    const [accPayments, setAccPayments] = useState(0);
-    const [accPF, setAccPF] = useState([0, 0, 0, 0]);
 
     const addHistory = (type: PaymentHistoryEntry["type"], label: string, montant: number, details?: string, designation?: string) => {
         if (!onHistoryChange) return;
@@ -38,42 +32,44 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
         onHistoryChange([...history, { id: crypto.randomUUID(), date: new Date().toISOString(), type, label, montant, designation, soldeAfter: totalEntree + (montant > 0 ? montant : 0), details }]);
     };
 
-    useEffect(() => {
-        if (initialized.current || !initialItems || initialItems.length === 0) return;
-        initialized.current = true;
-        let restoredPayments = 0;
-        const restoredWithdraws = [0, 0, 0, 0];
-        initialItems.forEach(item => {
-            if (item.designation === "Paiement client" && item.montant > 0) restoredPayments += item.montant;
-            else if (item.designation.startsWith("Fonds Portefeuille ") && item.montant > 0) {
-                const idx = parseInt(item.designation.replace("Fonds Portefeuille ", "")) - 1;
-                if (idx >= 0 && idx < 4) restoredWithdraws[idx] = item.montant;
-            }
-        });
-        // Restaurer dans les accumulateurs, PAS dans les champs session
-        // → les champs restent vides pour une nouvelle saisie propre
-        if (restoredPayments > 0) setAccPayments(restoredPayments);
-        if (restoredWithdraws.some(w => w > 0)) setAccPF(restoredWithdraws);
-    }, [initialItems]);
-
     const uid = () => crypto.randomUUID();
 
-    // Totaux de la session courante (champs en cours)
+    // SOURCE UNIQUE DE VÉRITÉ : accumulateurs calculés DIRECTEMENT depuis l'historique
+    // À chaque render, on recalcule → les totaux évoluent à chaque nouvelle entrée
+    let accCredits = history.filter(h => h.type === "credit" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+    let accPayments = history.filter(h => h.type === "paiement" && h.montant > 0).reduce((s, h) => s + h.montant, 0);
+    let accPF = [0, 0, 0, 0];
+    history.forEach(h => {
+        if (h.type === "retrait_pf" && h.montant > 0 && h.designation) {
+            const m = h.designation.match(/Portefeuille (\d+)/);
+            if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < 4) accPF[idx] += h.montant; }
+        }
+    });
+    // Compléter avec initialItems si présent (fallback quand pas d'historique)
+    if (initialItems && initialItems.length > 0) {
+        initialItems.forEach(item => {
+            if (item.designation === "Paiement client" && item.montant > 0 && accPayments === 0) accPayments += item.montant;
+            else if (item.designation.startsWith("Fonds Portefeuille ") && item.montant > 0) {
+                const idx = parseInt(item.designation.replace("Fonds Portefeuille ", "")) - 1;
+                if (idx >= 0 && idx < 4 && accPF[idx] === 0) accPF[idx] += item.montant;
+            }
+        });
+    }
+
+    // Totaux de la session courante (champs en cours de saisie)
     const sessionTotal1 = credits.reduce((s, c) => s + (c.montant || 0), 0);
     const sessionTotal2Payments = payments.reduce((s, p) => s + (p.montant || 0), 0);
     const sessionTotal2PF = pfWithdraws.reduce((s, w) => s + w, 0);
 
-    // Totaux cumulatifs = accumulateurs (sessions précédentes) + session courante
+    // Totaux cumulatifs = accumulateurs (depuis historique) + session courante
     const total1 = accCredits + sessionTotal1;
     const total2Payments = accPayments + sessionTotal2Payments;
     const total2PF = accPF.reduce((s, w) => s + w, 0) + sessionTotal2PF;
     const cumPFRetraits = accPF.map((a, i) => a + pfWithdraws[i]);
 
-    // Nouvelle saisie : accumuler avant de vider
+    // Nouvelle saisie : juste vider les champs. Les accumulateurs sont calculés depuis l'historique,
+    // donc ils conservent automatiquement toutes les valeurs enregistrées.
     const newSession = () => {
-        setAccCredits(prev => prev + sessionTotal1);
-        setAccPayments(prev => prev + sessionTotal2Payments);
-        setAccPF(prev => prev.map((w, i) => w + pfWithdraws[i]));
         setCredits([]);
         setPayments([]);
         setPfWithdraws([0, 0, 0, 0]);
