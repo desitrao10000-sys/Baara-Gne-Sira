@@ -343,27 +343,28 @@ export default function EntryPaymentHelper({ onValidate, initialItems, history =
                 </div>
             )}
 
-            {(showPC || showFP) && (credits.length > 0 || payments.length > 0 || pfWithdraws.some(w => w > 0)) && (
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-1">
-                    {showPC && total1 > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-slate-600">Total 1 (Crédits clients)</span><span className="font-black text-red-600">{fmt(total1)} FCFA</span></div>)}
-                    {total2Payments > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-indigo-600">→ Paiement client</span><span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span></div>)}
-                    {total2PF > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-amber-600">→ Fonds portefeuille</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>)}
-                    {showPC && total1 > 0 && (() => {
-                        const creditRestant = Math.max(0, total1 - total2Payments);
-                        const creditsRegles = Math.min(total1, total2Payments);
-                        return (
+            {(showPC || showFP) && (total1 > 0 || total2Payments > 0 || total2PF > 0) && (() => {
+                const creditRestant = Math.max(0, total1 - total2Payments);
+                const creditsRegles = Math.min(total1, total2Payments);
+                const t = total2Payments + total2PF;
+                return (
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-300 space-y-1">
+                        {showPC && total1 > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-slate-600">Crédit total client</span><span className="font-black text-orange-600">💳 {fmt(total1)} FCFA</span></div>)}
+                        {total2Payments > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-indigo-600">→ Paiement client reçu</span><span className="font-black text-green-700">+{fmt(total2Payments)} FCFA</span></div>)}
+                        {total2PF > 0 && (<div className="flex justify-between text-xs"><span className="font-bold text-amber-600">→ Fonds portefeuille</span><span className="font-black text-green-700">+{fmt(total2PF)} FCFA</span></div>)}
+                        {showPC && total1 > 0 && (
                             <>
                                 <div className="flex justify-between text-xs border-t border-slate-300 pt-1"><span className="font-bold text-blue-600">→ Crédits clients réglés</span><span className="font-black text-blue-700">✅ {fmt(creditsRegles)} FCFA</span></div>
-                                <div className="flex justify-between text-sm border-t border-slate-300 pt-2"><span className="font-black text-slate-800">Total crédit restant</span><span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>{fmt(creditRestant)} FCFA</span></div>
+                                <div className="flex justify-between text-sm border-t border-slate-300 pt-2"><span className="font-black text-slate-800">Crédit restant dû</span><span className={`font-black ${creditRestant > 0 ? "text-red-600" : "text-green-700"}`}>⏳ {fmt(creditRestant)} FCFA</span></div>
                             </>
-                        );
-                    })()}
-                    {(() => { const t = total2Payments + total2PF; return t > 0 ? (<div className="flex justify-between text-sm border-t border-slate-200 pt-2"><span className="font-black text-slate-800">Total général entrée</span><span className="font-black text-green-700 text-base">+{fmt(t)} FCFA</span></div>) : null; })()}
-                    <button onClick={newSession} className="w-full mt-2 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 bg-indigo-100 text-indigo-700 border-2 border-dashed border-indigo-300 hover:bg-indigo-200 transition-all">
-                        <RotateCcw size={12} /> Nouvelle saisie (vider les champs)
-                    </button>
-                </div>
-            )}
+                        )}
+                        {t > 0 && (<div className="flex justify-between text-sm border-t border-slate-200 pt-2"><span className="font-black text-slate-800">Total général entrée</span><span className="font-black text-green-700 text-base">+{fmt(t)} FCFA</span></div>)}
+                        <button onClick={newSession} className="w-full mt-2 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 bg-indigo-100 text-indigo-700 border-2 border-dashed border-indigo-300 hover:bg-indigo-200 transition-all">
+                            <RotateCcw size={12} /> Nouvelle saisie (vider les champs)
+                        </button>
+                    </div>
+                );
+            })()}
 
             {showFP && (
                 <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 space-y-3">
